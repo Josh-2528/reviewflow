@@ -51,7 +51,10 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.startsWith(path)
   )
 
-  if (isAuthPage && user) {
+  // Allow demo page through without redirect
+  const isDemoPage = request.nextUrl.pathname.startsWith('/demo')
+
+  if (isAuthPage && !isDemoPage && user) {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'
     return NextResponse.redirect(url)

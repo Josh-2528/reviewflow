@@ -6,6 +6,7 @@ import {
   Star,
   ArrowRight,
   CheckCircle2,
+  Play,
 } from 'lucide-react'
 
 export default function LandingPage() {
@@ -53,6 +54,13 @@ export default function LandingPage() {
             >
               Start Free Trial
               <ArrowRight size={18} />
+            </Link>
+            <Link
+              href="/demo"
+              className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-6 py-3 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+            >
+              <Play size={18} />
+              Try Demo
             </Link>
           </div>
           <p className="mt-4 text-sm text-gray-500">
