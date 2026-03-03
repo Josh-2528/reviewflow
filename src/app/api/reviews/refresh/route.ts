@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { fetchReviews, parseGoogleReview } from '@/lib/google'
 import { generateReviewReply } from '@/lib/claude'
 import { postReply } from '@/lib/google'
+import { getPlanById, canReceiveReviews } from '@/lib/stripe'
 
 export async function POST() {
   try {
@@ -39,6 +40,10 @@ export async function POST() {
       )
     }
 
+    // Plan-based gating
+    const plan = getPlanById(profile.plan_id)
+    const withinLimit = await canReceiveReviews(user.id, adminClient, plan)
+
     // Fetch reviews from Google
     let googleReviews
     try {
@@ -71,6 +76,12 @@ export async function POST() {
 
       if (existing) continue
 
+      // Check review limit for free plan
+      if (!withinLimit) {
+        errors.push(`Review limit reached for your plan. Upgrade to Pro for unlimited reviews.`)
+        break
+      }
+
       // Save new review
       const { data: savedReview, error: saveError } = await adminClient
         .from('reviews')
@@ -99,6 +110,12 @@ export async function POST() {
 
       // Skip reply generation for reviews that already have replies
       if (parsed.has_existing_reply) continue
+
+      // Gate: AI replies require Pro or Business plan
+      if (!plan.aiReplies) {
+        // Free plan — leave review as "new" with no AI reply
+        continue
+      }
 
       // Generate AI reply
       try {
@@ -133,8 +150,8 @@ export async function POST() {
           details: `AI reply generated for ${parsed.reviewer_name}'s review`,
         })
 
-        // Auto-publish if enabled
-        if (profile.auto_publish) {
+        // Auto-publish if enabled AND plan allows it
+        if (profile.auto_publish && plan.autoPublish) {
           try {
             await postReply(
               user.id,

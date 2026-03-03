@@ -14,6 +14,8 @@ import {
   Save,
   Unplug,
   Link2,
+  CreditCard,
+  ExternalLink,
 } from 'lucide-react'
 import type { User } from '@/lib/types'
 
@@ -76,6 +78,20 @@ export default function SettingsPage() {
       toast.error('Failed to save settings')
     }
     setSaving(false)
+  }
+
+  const handleManageBilling = async () => {
+    try {
+      const res = await fetch('/api/stripe/portal', { method: 'POST' })
+      const data = await res.json()
+      if (res.ok && data.url) {
+        window.location.href = data.url
+      } else {
+        toast.error(data.error || 'Failed to open billing portal')
+      }
+    } catch {
+      toast.error('Failed to open billing portal')
+    }
   }
 
   const handleConnectGoogle = async () => {
@@ -263,11 +279,25 @@ export default function SettingsPage() {
                 <p className="mt-0.5 text-sm text-gray-500">
                   Post AI replies automatically without approval
                 </p>
+                {profile?.plan_id !== 'business' && (
+                  <p className="mt-1 text-xs text-amber-600">
+                    Requires Business plan.{' '}
+                    <a href="/pricing" className="underline">
+                      Upgrade
+                    </a>
+                  </p>
+                )}
               </div>
               <button
-                onClick={() => setAutoPublish(!autoPublish)}
+                onClick={() => {
+                  if (profile?.plan_id !== 'business') {
+                    toast.error('Auto-publish requires the Business plan')
+                    return
+                  }
+                  setAutoPublish(!autoPublish)
+                }}
                 className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
-                  autoPublish ? 'bg-blue-600' : 'bg-gray-200'
+                  autoPublish && profile?.plan_id === 'business' ? 'bg-blue-600' : 'bg-gray-200'
                 }`}
               >
                 <span
@@ -314,6 +344,63 @@ export default function SettingsPage() {
                 </button>
               </div>
             )}
+          </section>
+
+          {/* Subscription & Billing */}
+          <section className="mb-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            <h2 className="mb-4 text-lg font-semibold text-gray-900">
+              Subscription & Billing
+            </h2>
+
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Current Plan</p>
+                <p className="text-lg font-semibold text-gray-900 capitalize">
+                  {profile?.plan_id || 'Free'}
+                </p>
+              </div>
+              {profile?.subscription_status && (
+                <span
+                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                    profile.subscription_status === 'active'
+                      ? 'bg-green-100 text-green-700'
+                      : profile.subscription_status === 'past_due'
+                      ? 'bg-red-100 text-red-700'
+                      : 'bg-gray-100 text-gray-600'
+                  }`}
+                >
+                  {profile.subscription_status}
+                </span>
+              )}
+            </div>
+
+            {profile?.subscription_current_period_end && (
+              <p className="mb-4 text-sm text-gray-500">
+                Current period ends:{' '}
+                {new Date(profile.subscription_current_period_end).toLocaleDateString()}
+              </p>
+            )}
+
+            <div className="flex gap-3">
+              {(!profile?.plan_id || profile.plan_id === 'free') && (
+                <a
+                  href="/pricing"
+                  className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                >
+                  <CreditCard size={14} />
+                  Upgrade Plan
+                </a>
+              )}
+              {profile?.stripe_customer_id && (
+                <button
+                  onClick={handleManageBilling}
+                  className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  <ExternalLink size={14} />
+                  Manage Billing
+                </button>
+              )}
+            </div>
           </section>
 
           {/* Account */}

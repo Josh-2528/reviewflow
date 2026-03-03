@@ -12,6 +12,11 @@ export interface User {
   auto_publish: boolean
   onboarding_completed: boolean
   google_connected: boolean
+  stripe_customer_id: string | null
+  stripe_subscription_id: string | null
+  plan_id: string
+  subscription_status: string | null
+  subscription_current_period_end: string | null
   created_at: string
   updated_at: string
 }

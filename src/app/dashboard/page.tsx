@@ -35,6 +35,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [editingReview, setEditingReview] = useState<Review | null>(null)
+  const [planId, setPlanId] = useState<string>('free')
   const router = useRouter()
 
   const fetchReviews = useCallback(async () => {
@@ -53,10 +54,18 @@ export default function DashboardPage() {
     }
   }
 
+  const fetchPlan = async () => {
+    const res = await fetch('/api/settings')
+    if (res.ok) {
+      const data = await res.json()
+      setPlanId(data.profile?.plan_id || 'free')
+    }
+  }
+
   useEffect(() => {
     const init = async () => {
       setLoading(true)
-      await Promise.all([fetchReviews(), fetchStats()])
+      await Promise.all([fetchReviews(), fetchStats(), fetchPlan()])
       setLoading(false)
     }
     init()
@@ -251,6 +260,26 @@ export default function DashboardPage() {
                 label="Published This Month"
                 value={stats.replies_published_this_month}
               />
+            </div>
+          )}
+
+          {/* Free plan upgrade banner */}
+          {planId === 'free' && (
+            <div className="mb-6 flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 p-4">
+              <div>
+                <p className="text-sm font-medium text-amber-800">
+                  You&apos;re on the Free plan
+                </p>
+                <p className="mt-0.5 text-sm text-amber-700">
+                  Upgrade to Pro for AI-generated replies and auto-polling, or Business for full automation.
+                </p>
+              </div>
+              <Link
+                href="/pricing"
+                className="shrink-0 rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700"
+              >
+                Upgrade
+              </Link>
             </div>
           )}
 

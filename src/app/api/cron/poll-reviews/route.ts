@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { fetchReviews, parseGoogleReview, postReply } from '@/lib/google'
 import { generateReviewReply } from '@/lib/claude'
+import { getPlanById, canReceiveReviews } from '@/lib/stripe'
 
 // Cron job to poll reviews for all connected users
 // Runs every 15 minutes via Vercel cron
@@ -31,6 +32,12 @@ export async function GET(request: NextRequest) {
 
   for (const user of users) {
     const userResult = { userId: user.id, newReviews: 0, errors: [] as string[] }
+
+    // Only auto-poll for users on Pro or Business plans
+    const plan = getPlanById(user.plan_id)
+    if (!plan.autoPolling) {
+      continue
+    }
 
     try {
       // Fetch reviews from Google
@@ -82,6 +89,9 @@ export async function GET(request: NextRequest) {
 
         if (parsed.has_existing_reply) continue
 
+        // Gate: AI replies require Pro or Business
+        if (!plan.aiReplies) continue
+
         // Generate AI reply
         try {
           const replyText = await generateReviewReply({
@@ -112,8 +122,8 @@ export async function GET(request: NextRequest) {
             details: `AI reply generated for ${parsed.reviewer_name}'s review`,
           })
 
-          // Auto-publish if enabled
-          if (user.auto_publish) {
+          // Auto-publish if enabled AND plan allows it
+          if (user.auto_publish && plan.autoPublish) {
             try {
               await postReply(
                 user.id,

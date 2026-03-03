@@ -21,6 +21,12 @@ export default function LandingPage() {
           </div>
           <div className="flex items-center gap-4">
             <Link
+              href="/pricing"
+              className="text-sm font-medium text-gray-600 hover:text-gray-900"
+            >
+              Pricing
+            </Link>
+            <Link
               href="/login"
               className="text-sm font-medium text-gray-600 hover:text-gray-900"
             >
@@ -115,44 +121,88 @@ export default function LandingPage() {
 
       {/* Pricing */}
       <section className="bg-gray-50 px-6 py-20">
-        <div className="mx-auto max-w-md">
-          <h2 className="mb-8 text-center text-3xl font-bold text-gray-900">
-            Simple pricing
+        <div className="mx-auto max-w-5xl">
+          <h2 className="mb-4 text-center text-3xl font-bold text-gray-900">
+            Simple, transparent pricing
           </h2>
-          <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
-            <div className="text-center">
-              <p className="text-sm font-medium uppercase tracking-wide text-blue-600">
-                Professional
-              </p>
-              <div className="mt-4 flex items-baseline justify-center gap-1">
-                <span className="text-5xl font-bold text-gray-900">$299</span>
+          <p className="mb-12 text-center text-gray-600">
+            Start free. Upgrade when you&apos;re ready for AI-powered automation.
+          </p>
+          <div className="grid gap-6 md:grid-cols-3">
+            {/* Free */}
+            <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+              <p className="text-sm font-medium text-gray-500">Free</p>
+              <div className="mt-2 flex items-baseline gap-1">
+                <span className="text-3xl font-bold text-gray-900">$0</span>
                 <span className="text-gray-500">/month</span>
               </div>
-              <p className="mt-2 text-sm text-gray-500">
-                Everything you need. No hidden fees.
-              </p>
+              <p className="mt-2 text-sm text-gray-500">Up to 10 reviews/month</p>
+              <ul className="mt-6 space-y-2">
+                {['Manual review polling', 'Basic dashboard', 'Activity log'].map((f) => (
+                  <li key={f} className="flex items-center gap-2 text-sm text-gray-700">
+                    <CheckCircle2 className="h-4 w-4 shrink-0 text-green-500" />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <Link
+                href="/signup"
+                className="mt-6 block w-full rounded-lg border border-gray-300 py-2.5 text-center text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Get Started
+              </Link>
             </div>
-            <ul className="mt-8 space-y-3">
-              {[
-                'Unlimited review monitoring',
-                'AI-generated replies for every review',
-                'One-click or auto publishing',
-                'Custom tone & instructions',
-                'Activity log & analytics',
-                'Priority support',
-              ].map((feature) => (
-                <li key={feature} className="flex items-center gap-3 text-sm text-gray-700">
-                  <CheckCircle2 className="h-5 w-5 shrink-0 text-green-500" />
-                  {feature}
-                </li>
-              ))}
-            </ul>
-            <Link
-              href="/signup"
-              className="mt-8 block w-full rounded-lg bg-blue-600 py-3 text-center text-sm font-medium text-white hover:bg-blue-700"
-            >
-              Start Free Trial
-            </Link>
+            {/* Pro */}
+            <div className="relative rounded-2xl border-2 border-blue-600 bg-white p-6 shadow-sm">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                <span className="rounded-full bg-blue-600 px-3 py-0.5 text-xs font-semibold text-white">
+                  Most Popular
+                </span>
+              </div>
+              <p className="text-sm font-medium text-blue-600">Pro</p>
+              <div className="mt-2 flex items-baseline gap-1">
+                <span className="text-3xl font-bold text-gray-900">$49</span>
+                <span className="text-gray-500">/month</span>
+              </div>
+              <p className="mt-2 text-sm text-gray-500">Unlimited reviews + AI replies</p>
+              <ul className="mt-6 space-y-2">
+                {['AI-generated replies', 'Auto-polling every 15 min', 'Custom tone & instructions'].map((f) => (
+                  <li key={f} className="flex items-center gap-2 text-sm text-gray-700">
+                    <CheckCircle2 className="h-4 w-4 shrink-0 text-green-500" />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <Link
+                href="/pricing"
+                className="mt-6 block w-full rounded-lg bg-blue-600 py-2.5 text-center text-sm font-medium text-white hover:bg-blue-700"
+              >
+                Start Pro Trial
+              </Link>
+            </div>
+            {/* Business */}
+            <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+              <p className="text-sm font-medium text-gray-500">Business</p>
+              <div className="mt-2 flex items-baseline gap-1">
+                <span className="text-3xl font-bold text-gray-900">$99</span>
+                <span className="text-gray-500">/month</span>
+              </div>
+              <p className="mt-2 text-sm text-gray-500">Full automation + priority support</p>
+              <ul className="mt-6 space-y-2">
+                {['Everything in Pro', 'Auto-publish replies', 'Priority support'].map((f) => (
+                  <li key={f} className="flex items-center gap-2 text-sm text-gray-700">
+                    <CheckCircle2 className="h-4 w-4 shrink-0 text-green-500" />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <Link
+                href="/pricing"
+                className="mt-6 block w-full rounded-lg border border-gray-300 py-2.5 text-center text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Start Business Trial
+              </Link>
+            </div>
           </div>
         </div>
       </section>
