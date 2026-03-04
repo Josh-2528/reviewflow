@@ -14,6 +14,7 @@ import {
   ChevronDown,
   Phone,
   Eye,
+  Quote,
 } from 'lucide-react'
 import { useBranding } from '@/components/branding-provider'
 
@@ -46,14 +47,12 @@ export default function LandingPage() {
             <Link href="/login" className="hidden text-sm font-medium text-gray-300 transition-colors hover:text-white sm:block">
               Login
             </Link>
-            <a
-              href="https://calendly.com"
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              href="/signup"
               className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-600"
             >
-              Book a Call
-            </a>
+              Start Free Trial
+            </Link>
           </div>
         </div>
       </nav>
@@ -83,15 +82,13 @@ export default function LandingPage() {
               </p>
 
               <div className="mt-10 flex flex-col gap-4 sm:flex-row">
-                <a
-                  href="https://calendly.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <Link
+                  href="/signup"
                   className="flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-7 py-3.5 text-base font-semibold text-white shadow-lg shadow-emerald-500/20 transition-all hover:bg-emerald-600 hover:shadow-xl hover:shadow-emerald-500/25"
                 >
-                  Book Strategy Call
+                  Start Free Trial
                   <ArrowRight size={18} />
-                </a>
+                </Link>
                 <Link
                   href="/demo"
                   className="flex items-center justify-center gap-2 rounded-xl border border-gray-600 px-7 py-3.5 text-base font-semibold text-gray-300 transition-all hover:border-gray-500 hover:text-white"
@@ -190,6 +187,55 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ─── Bundled with WashBot (light gray) ──────────────── */}
+      <section className="bg-gray-50 px-6 py-20 sm:py-28">
+        <div className="mx-auto max-w-5xl">
+          <div className="mx-auto mb-14 max-w-2xl text-center">
+            <p className="mb-3 text-sm font-semibold uppercase tracking-wider text-emerald-600">Better Together</p>
+            <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl">Complete Customer Protection Stack</h2>
+            <p className="mt-4 text-lg text-gray-500">
+              WashBot intercepts complaints before they become reviews. {app_name} handles the ones that slip through.
+            </p>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50">
+                <Phone className="h-6 w-6 text-blue-600" />
+              </div>
+              <h3 className="mb-1 text-lg font-bold text-gray-900">WashBot</h3>
+              <p className="mb-3 text-sm font-medium text-blue-600">AI Phone Receptionist</p>
+              <p className="text-sm leading-relaxed text-gray-600">
+                Answers calls, de-escalates angry customers, logs incidents 24/7. Catches complaints before they hit Google.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border-2 border-emerald-200 bg-emerald-50/50 p-8 shadow-sm">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100">
+                <MessageSquareText className="h-6 w-6 text-emerald-600" />
+              </div>
+              <h3 className="mb-1 text-lg font-bold text-gray-900">{app_name}</h3>
+              <p className="mb-3 text-sm font-medium text-emerald-600">AI Review Manager</p>
+              <p className="text-sm leading-relaxed text-gray-600">
+                Monitors reviews, generates replies, publishes responses automatically. Handles the reviews that do get posted.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-10 text-center">
+            <a
+              href="https://calendly.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-7 py-3.5 text-base font-semibold text-white shadow-lg shadow-emerald-500/20 transition-all hover:bg-emerald-600"
+            >
+              Get Both — Book a Call
+              <ArrowRight size={18} />
+            </a>
+          </div>
+        </div>
+      </section>
+
       {/* ─── Problem Section (white) ────────────────────────── */}
       <section className="px-6 py-20 sm:py-28">
         <div className="mx-auto max-w-5xl">
@@ -254,6 +300,70 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ─── See The AI In Action (white) ───────────────────── */}
+      <section className="px-6 py-20 sm:py-28">
+        <div className="mx-auto max-w-5xl">
+          <div className="mx-auto mb-14 max-w-2xl text-center">
+            <p className="mb-3 text-sm font-semibold uppercase tracking-wider text-emerald-600">Live Examples</p>
+            <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl">See The AI In Action</h2>
+            <p className="mt-4 text-lg text-gray-500">
+              Real reviews. Real AI-drafted replies. Ready to publish in seconds.
+            </p>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* 1-star review */}
+            <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+              <div className="p-6">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 text-sm font-bold text-red-600">D</div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">Dave R.</p>
+                    <div className="flex gap-0.5">
+                      <Star size={13} className="fill-amber-400 text-amber-400" />
+                      {[2,3,4,5].map((i) => <Star key={i} size={13} className="text-gray-200" />)}
+                    </div>
+                  </div>
+                </div>
+                <p className="mt-4 text-sm leading-relaxed text-gray-700">
+                  &ldquo;Machine ate my $20 and nobody answered the phone. Waited 30 minutes. Absolutely useless.&rdquo;
+                </p>
+              </div>
+              <div className="border-t border-emerald-100 bg-emerald-50/60 p-6">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-emerald-600">AI Draft Reply</p>
+                <p className="text-sm leading-relaxed text-gray-700">
+                  Hi Dave, I&apos;m really sorry about your experience — that&apos;s not the standard we aim for. I&apos;ve flagged this with our maintenance team and we&apos;d like to make it right. Could you reach out to us directly so we can arrange a refund? We appreciate you letting us know.
+                </p>
+              </div>
+            </div>
+
+            {/* 5-star review */}
+            <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+              <div className="p-6">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-600">S</div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">Sarah N.</p>
+                    <div className="flex gap-0.5">
+                      {[1,2,3,4,5].map((i) => <Star key={i} size={13} className="fill-amber-400 text-amber-400" />)}
+                    </div>
+                  </div>
+                </div>
+                <p className="mt-4 text-sm leading-relaxed text-gray-700">
+                  &ldquo;Best car wash in the area! The full detail package is incredible, my car has never looked this good.&rdquo;
+                </p>
+              </div>
+              <div className="border-t border-emerald-100 bg-emerald-50/60 p-6">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-emerald-600">AI Draft Reply</p>
+                <p className="text-sm leading-relaxed text-gray-700">
+                  Thanks so much Sarah! Really glad the full detail left your car sparkling. We love hearing that — see you next time!
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ─── Results Section (dark navy) ────────────────────── */}
       <section className="px-6 py-20 sm:py-28" style={{ background: `linear-gradient(180deg, ${NAVY} 0%, #162033 100%)` }}>
         <div className="mx-auto max-w-5xl">
@@ -264,10 +374,10 @@ export default function LandingPage() {
 
           <div className="grid grid-cols-2 gap-5 lg:grid-cols-4">
             {[
-              { value: '2 min', label: 'Average reply time (down from 2 days)' },
+              { value: '2 min', label: 'Average reply time with auto-polling enabled' },
               { value: '100%', label: 'Review response rate' },
-              { value: '24/7', label: 'Reviews monitored around the clock' },
-              { value: '12hrs', label: 'Saved per month on review management' },
+              { value: '24/7', label: 'Reviews monitored and replied to around the clock' },
+              { value: '12hrs', label: 'Saved per month (based on 40 reviews at 15 min each vs 2 min with AI)' },
             ].map((s) => (
               <div key={s.value} className="rounded-2xl border border-white/10 bg-white/5 p-6 text-center backdrop-blur-sm">
                 <p className="text-3xl font-extrabold text-emerald-400 sm:text-4xl">{s.value}</p>
@@ -278,58 +388,25 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ─── Bundled with WashBot (light gray) ──────────────── */}
-      <section className="bg-gray-50 px-6 py-20 sm:py-28">
-        <div className="mx-auto max-w-5xl">
-          <div className="mx-auto mb-14 max-w-2xl text-center">
-            <p className="mb-3 text-sm font-semibold uppercase tracking-wider text-emerald-600">Better Together</p>
-            <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl">Complete Customer Protection Stack</h2>
-            <p className="mt-4 text-lg text-gray-500">
-              WashBot intercepts complaints before they become reviews. {app_name} handles the ones that slip through.
-            </p>
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-2">
-            <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50">
-                <Phone className="h-6 w-6 text-blue-600" />
-              </div>
-              <h3 className="mb-1 text-lg font-bold text-gray-900">WashBot</h3>
-              <p className="mb-3 text-sm font-medium text-blue-600">AI Phone Receptionist</p>
-              <p className="text-sm leading-relaxed text-gray-600">
-                Answers calls, de-escalates angry customers, logs incidents 24/7. Catches complaints before they hit Google.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border-2 border-emerald-200 bg-emerald-50/50 p-8 shadow-sm">
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100">
-                <MessageSquareText className="h-6 w-6 text-emerald-600" />
-              </div>
-              <h3 className="mb-1 text-lg font-bold text-gray-900">{app_name}</h3>
-              <p className="mb-3 text-sm font-medium text-emerald-600">AI Review Manager</p>
-              <p className="text-sm leading-relaxed text-gray-600">
-                Monitors reviews, generates replies, publishes responses automatically. Handles the reviews that do get posted.
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-10 text-center">
-            <a
-              href="https://calendly.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-7 py-3.5 text-base font-semibold text-white shadow-lg shadow-emerald-500/20 transition-all hover:bg-emerald-600"
-            >
-              Get Both — Talk to Us
-              <ArrowRight size={18} />
-            </a>
-          </div>
+      {/* ─── Testimonial ────────────────────────────────────── */}
+      <section className="px-6 py-20 sm:py-24">
+        <div className="mx-auto max-w-3xl text-center">
+          <Quote size={40} className="mx-auto mb-6 text-emerald-200" />
+          <blockquote className="text-xl font-medium leading-relaxed text-gray-800 sm:text-2xl">
+            &ldquo;I don&apos;t have the time to reply to every review. I only reply to the bad ones — it would be good for the good ones to get recognition too.&rdquo;
+          </blockquote>
+          <p className="mt-6 text-sm font-semibold text-gray-500">
+            — Jordan, Owner, V8 Auto Carwash Group
+          </p>
+          <p className="mt-3 text-sm font-medium text-emerald-600">
+            That&apos;s exactly what {app_name} does.
+          </p>
         </div>
       </section>
 
       {/* ─── Pricing (white) ────────────────────────────────── */}
-      <section id="pricing" className="scroll-mt-20 px-6 py-20 sm:py-28">
-        <div className="mx-auto max-w-6xl">
+      <section id="pricing" className="scroll-mt-20 bg-gray-50 px-6 py-20 sm:py-28">
+        <div className="mx-auto max-w-4xl">
           <div className="mx-auto mb-16 max-w-2xl text-center">
             <p className="mb-3 text-sm font-semibold uppercase tracking-wider text-emerald-600">Pricing</p>
             <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl">
@@ -340,21 +417,7 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="grid gap-8 lg:grid-cols-3">
-            <PricingCard
-              name="Free"
-              price={0}
-              description="Try it out"
-              features={[
-                'Up to 10 reviews/month',
-                'Manual review polling',
-                'Basic dashboard',
-                'Activity log',
-              ]}
-              cta="Get Started Free"
-              ctaHref="/signup"
-              variant="default"
-            />
+          <div className="grid gap-8 lg:grid-cols-2">
             <PricingCard
               name="Pro"
               price={49}
@@ -367,10 +430,10 @@ export default function LandingPage() {
                 'Email notifications',
                 'Full analytics',
               ]}
-              cta="Start Pro Trial"
+              cta="Start 14-Day Free Trial"
               ctaHref="/signup"
               variant="popular"
-              badge="Most Popular"
+              badge="14-Day Free Trial"
             />
             <PricingCard
               name="Business"
@@ -379,10 +442,9 @@ export default function LandingPage() {
               features={[
                 'Everything in Pro',
                 'Auto-publish replies',
-                'Priority support',
-                'Priority email support',
+                'Priority support with direct access',
                 'Weekly summary emails',
-                'Multi-location support (coming soon)',
+                'Multi-location support',
               ]}
               cta="Start Business Trial"
               ctaHref="/signup"
@@ -393,7 +455,7 @@ export default function LandingPage() {
       </section>
 
       {/* ─── FAQ (light gray) ───────────────────────────────── */}
-      <section id="faq" className="scroll-mt-20 bg-gray-50 px-6 py-20 sm:py-28">
+      <section id="faq" className="scroll-mt-20 px-6 py-20 sm:py-28">
         <div className="mx-auto max-w-3xl">
           <div className="mb-14 text-center">
             <p className="mb-3 text-sm font-semibold uppercase tracking-wider text-emerald-600">FAQ</p>
@@ -423,7 +485,7 @@ export default function LandingPage() {
             />
             <FaqItem
               question="How does this work with WashBot?"
-              answer="WashBot handles phone complaints before they become reviews. ReviewFlow handles the reviews that do get posted. Together they give you complete reputation protection."
+              answer="WashBot and ReviewFlow work as a complete reputation protection stack. Here's how they work together: A frustrated customer calls about a jammed machine — WashBot answers instantly, de-escalates the situation, and texts you an incident report. Problem resolved, no staff needed. But sometimes the customer still leaves a Google review. That's where ReviewFlow takes over — it detects the new review within minutes, drafts a professional empathetic reply in your brand voice, and queues it for your approval. One click and it's published. Between WashBot catching complaints on the phone and ReviewFlow handling reviews online, nothing slips through the cracks."
             />
           </div>
         </div>
@@ -439,15 +501,13 @@ export default function LandingPage() {
             Join car wash operators who reply to every review in minutes, not days.
           </p>
           <div className="mt-10">
-            <a
-              href="https://calendly.com"
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              href="/signup"
               className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-8 py-4 text-base font-semibold text-white shadow-lg shadow-emerald-500/20 transition-all hover:bg-emerald-600 hover:shadow-xl"
             >
-              Book a Strategy Call
+              Start Free Trial
               <ArrowRight size={18} />
-            </a>
+            </Link>
           </div>
         </div>
       </section>
@@ -552,7 +612,7 @@ function PricingCard({
         <h3 className="text-lg font-bold text-gray-900">{name}</h3>
         <div className="mt-3 flex items-baseline gap-1">
           <span className="text-4xl font-extrabold text-gray-900">${price}</span>
-          {price > 0 && <span className="text-gray-500">/month</span>}
+          <span className="text-gray-500">/month</span>
         </div>
         <p className="mt-2 text-sm text-gray-500">{description}</p>
       </div>
