@@ -299,9 +299,9 @@ function SettingsPage() {
                 <p className="mt-0.5 text-sm text-gray-500">
                   Post AI replies automatically without approval
                 </p>
-                {profile?.plan_id !== 'business' && (
+                {profile?.plan_id !== 'pro' && (
                   <p className="mt-1 text-xs text-amber-600">
-                    Requires Business plan.{' '}
+                    Requires Pro plan.{' '}
                     <a href="/pricing" className="underline">
                       Upgrade
                     </a>
@@ -310,14 +310,14 @@ function SettingsPage() {
               </div>
               <button
                 onClick={() => {
-                  if (profile?.plan_id !== 'business') {
-                    toast.error('Auto-publish requires the Business plan')
+                  if (profile?.plan_id !== 'pro') {
+                    toast.error('Auto-publish requires the Pro plan')
                     return
                   }
                   setAutoPublish(!autoPublish)
                 }}
                 className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
-                  autoPublish && profile?.plan_id === 'business' ? 'bg-blue-600' : 'bg-gray-200'
+                  autoPublish && profile?.plan_id === 'pro' ? 'bg-blue-600' : 'bg-gray-200'
                 }`}
               >
                 <span

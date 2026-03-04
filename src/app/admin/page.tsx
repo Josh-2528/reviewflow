@@ -362,16 +362,13 @@ export default function AdminPage() {
                               onChange={(e) => handleChangePlan(user.id, e.target.value)}
                               disabled={changingPlan === user.id}
                               className={`appearance-none rounded-full py-1 pl-3 pr-7 text-xs font-medium disabled:opacity-50 ${
-                                user.plan_id === 'business'
-                                  ? 'bg-purple-100 text-purple-700'
-                                  : user.plan_id === 'pro'
-                                  ? 'bg-blue-100 text-blue-700'
+                                user.plan_id === 'pro'
+                                  ? 'bg-emerald-100 text-emerald-700'
                                   : 'bg-gray-100 text-gray-600'
                               }`}
                             >
                               <option value="free">Free</option>
-                              <option value="pro">Pro</option>
-                              <option value="business">Business</option>
+                              <option value="pro">Pro ($88/mo)</option>
                             </select>
                             <ChevronDown
                               size={12}

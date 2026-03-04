@@ -404,7 +404,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ─── Pricing (white) ────────────────────────────────── */}
+      {/* ─── Pricing (light gray) ──────────────────────────── */}
       <section id="pricing" className="scroll-mt-20 bg-gray-50 px-6 py-20 sm:py-28">
         <div className="mx-auto max-w-4xl">
           <div className="mx-auto mb-16 max-w-2xl text-center">
@@ -418,38 +418,45 @@ export default function LandingPage() {
           </div>
 
           <div className="grid gap-8 lg:grid-cols-2">
+            {/* Pro */}
             <PricingCard
-              name="Pro"
-              price={49}
-              description="For operators serious about reviews"
+              name="ReviewFlow Pro"
+              price={88}
+              description="Everything you need. Up to 3 locations."
               features={[
                 'Unlimited reviews',
                 'AI-generated replies',
                 'Auto-polling every 15 min',
                 'Custom tone & voice',
                 'Email notifications',
-                'Full analytics',
+                'Auto-publish replies',
+                'Weekly summary emails',
+                'Priority support',
+                'Up to 3 Google Business locations',
               ]}
               cta="Start 14-Day Free Trial"
               ctaHref="/signup"
               variant="popular"
               badge="14-Day Free Trial"
             />
-            <PricingCard
-              name="Business"
-              price={99}
-              description="Full automation, zero effort"
-              features={[
-                'Everything in Pro',
-                'Auto-publish replies',
-                'Priority support with direct access',
-                'Weekly summary emails',
-                'Multi-location support',
-              ]}
-              cta="Start Business Trial"
-              ctaHref="/signup"
-              variant="default"
-            />
+
+            {/* Enterprise */}
+            <div className="relative flex flex-col rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
+              <div className="mb-6">
+                <h3 className="text-lg font-bold text-gray-900">Enterprise</h3>
+                <p className="mt-2 text-sm font-medium text-gray-500">For operators with 4+ locations</p>
+              </div>
+              <p className="mb-6 flex-1 text-sm leading-relaxed text-gray-600">
+                Custom pricing, dedicated onboarding, and volume discounts for larger operations.
+              </p>
+              <a
+                href="mailto:admin@carwashai.com.au"
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white py-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50"
+              >
+                Contact Us
+                <ArrowRight size={16} />
+              </a>
+            </div>
           </div>
         </div>
       </section>

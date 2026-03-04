@@ -5,98 +5,30 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import {
-  MessageSquareText,
   CheckCircle2,
-  X,
   ArrowRight,
   Zap,
   Building2,
+  Mail,
 } from 'lucide-react'
-
-interface PlanCard {
-  id: string
-  name: string
-  price: number
-  description: string
-  features: { text: string; included: boolean }[]
-  cta: string
-  popular?: boolean
-}
-
-const plans: PlanCard[] = [
-  {
-    id: 'free',
-    name: 'Free',
-    price: 0,
-    description: 'Get started with basic review management',
-    features: [
-      { text: 'Up to 10 reviews/month', included: true },
-      { text: 'Manual review polling', included: true },
-      { text: 'Basic dashboard & activity log', included: true },
-      { text: 'AI-generated replies', included: false },
-      { text: 'Auto-polling every 15 min', included: false },
-      { text: 'Auto-publish replies', included: false },
-      { text: 'Priority support', included: false },
-    ],
-    cta: 'Get Started',
-  },
-  {
-    id: 'pro',
-    name: 'Pro',
-    price: 49,
-    description: 'AI-powered replies for growing businesses',
-    features: [
-      { text: 'Unlimited reviews', included: true },
-      { text: 'AI-generated replies', included: true },
-      { text: 'Auto-polling every 15 min', included: true },
-      { text: 'Custom tone & instructions', included: true },
-      { text: 'Activity log & analytics', included: true },
-      { text: 'Auto-publish replies', included: false },
-      { text: 'Priority support', included: false },
-    ],
-    cta: 'Start Pro Trial',
-    popular: true,
-  },
-  {
-    id: 'business',
-    name: 'Business',
-    price: 99,
-    description: 'Full automation with hands-off management',
-    features: [
-      { text: 'Everything in Pro', included: true },
-      { text: 'Auto-publish replies', included: true },
-      { text: 'Priority support', included: true },
-      { text: 'Dedicated account manager', included: true },
-      { text: 'Unlimited reviews', included: true },
-      { text: 'AI-generated replies', included: true },
-      { text: 'Custom tone & instructions', included: true },
-    ],
-    cta: 'Start Business Trial',
-  },
-]
+import { AppLogo } from '@/components/app-logo'
 
 export default function PricingPage() {
-  const [loading, setLoading] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
   const router = useRouter()
 
-  const handleSubscribe = async (planId: string) => {
-    if (planId === 'free') {
-      router.push('/signup')
-      return
-    }
-
-    setLoading(planId)
+  const handleSubscribe = async () => {
+    setLoading(true)
     try {
       const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan_id: planId }),
+        body: JSON.stringify({ plan_id: 'pro' }),
       })
 
       const data = await res.json()
 
       if (res.status === 401) {
-        // Not logged in — redirect to signup
         router.push('/signup')
         return
       }
@@ -109,7 +41,7 @@ export default function PricingPage() {
     } catch {
       toast.error('Something went wrong')
     }
-    setLoading(null)
+    setLoading(false)
   }
 
   return (
@@ -118,8 +50,7 @@ export default function PricingPage() {
       <nav className="border-b border-gray-100">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <Link href="/" className="flex items-center gap-2">
-            <MessageSquareText className="h-7 w-7 text-blue-600" />
-            <span className="text-xl font-bold text-gray-900">ReviewFlow</span>
+            <AppLogo />
           </Link>
           <div className="flex items-center gap-4">
             <Link
@@ -130,9 +61,9 @@ export default function PricingPage() {
             </Link>
             <Link
               href="/signup"
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-600"
             >
-              Sign Up
+              Start Free Trial
             </Link>
           </div>
         </div>
@@ -142,90 +73,108 @@ export default function PricingPage() {
       <section className="px-6 pb-8 pt-16">
         <div className="mx-auto max-w-4xl text-center">
           <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl">
-            Choose the right plan for your business
+            Pricing That Pays For Itself In Saved Customers
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-lg text-gray-600">
-            Start free. Upgrade when you need AI-powered replies and automation.
+            One lost regular costs you $572/year. ReviewFlow Pro costs less than losing a single customer.
           </p>
         </div>
       </section>
 
       {/* Plans Grid */}
       <section className="px-6 pb-20 pt-8">
-        <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-3">
-          {plans.map((plan) => (
-            <div
-              key={plan.id}
-              className={`relative flex flex-col rounded-2xl border p-8 shadow-sm ${
-                plan.popular
-                  ? 'border-blue-600 ring-1 ring-blue-600'
-                  : 'border-gray-200'
-              }`}
-            >
-              {plan.popular && (
-                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white">
-                    <Zap size={12} />
-                    Most Popular
-                  </span>
-                </div>
-              )}
+        <div className="mx-auto grid max-w-4xl gap-8 lg:grid-cols-2">
+          {/* Pro Plan */}
+          <div className="relative flex flex-col rounded-2xl border-2 border-emerald-500 bg-white p-8 shadow-sm ring-1 ring-emerald-500/10">
+            <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500 px-3 py-1 text-xs font-semibold text-white">
+                <Zap size={12} />
+                14-Day Free Trial
+              </span>
+            </div>
 
-              <div className="mb-6">
-                <div className="mb-2 flex items-center gap-2">
-                  {plan.id === 'business' ? (
-                    <Building2 className="h-5 w-5 text-blue-600" />
-                  ) : plan.id === 'pro' ? (
-                    <Zap className="h-5 w-5 text-blue-600" />
-                  ) : null}
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    {plan.name}
-                  </h3>
-                </div>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-4xl font-bold text-gray-900">
-                    ${plan.price}
-                  </span>
-                  {plan.price > 0 && (
-                    <span className="text-gray-500">/month</span>
-                  )}
-                </div>
-                <p className="mt-2 text-sm text-gray-500">{plan.description}</p>
+            <div className="mb-6">
+              <div className="mb-2 flex items-center gap-2">
+                <Zap className="h-5 w-5 text-emerald-500" />
+                <h3 className="text-lg font-bold text-gray-900">ReviewFlow Pro</h3>
               </div>
+              <div className="flex items-baseline gap-1">
+                <span className="text-4xl font-extrabold text-gray-900">$88</span>
+                <span className="text-gray-500">/month</span>
+              </div>
+              <p className="mt-2 text-sm text-gray-500">Everything you need. Up to 3 locations.</p>
+            </div>
 
-              <ul className="mb-8 flex-1 space-y-3">
-                {plan.features.map((feature) => (
-                  <li key={feature.text} className="flex items-center gap-3 text-sm">
-                    {feature.included ? (
-                      <CheckCircle2 className="h-4.5 w-4.5 shrink-0 text-green-500" />
-                    ) : (
-                      <X className="h-4.5 w-4.5 shrink-0 text-gray-300" />
-                    )}
-                    <span
-                      className={
-                        feature.included ? 'text-gray-700' : 'text-gray-400'
-                      }
-                    >
-                      {feature.text}
-                    </span>
+            <ul className="mb-8 flex-1 space-y-3">
+              {[
+                'Unlimited reviews',
+                'AI-generated replies',
+                'Auto-polling every 15 min',
+                'Custom tone & voice',
+                'Email notifications',
+                'Auto-publish replies',
+                'Weekly summary emails',
+                'Priority support',
+                'Up to 3 Google Business locations',
+              ].map((f) => (
+                <li key={f} className="flex items-center gap-3 text-sm text-gray-700">
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
+                  {f}
+                </li>
+              ))}
+            </ul>
+
+            <button
+              onClick={handleSubscribe}
+              disabled={loading}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 py-3 text-sm font-semibold text-white transition-colors hover:bg-emerald-600 disabled:opacity-50"
+            >
+              {loading ? 'Loading...' : 'Start 14-Day Free Trial'}
+              <ArrowRight size={16} />
+            </button>
+          </div>
+
+          {/* Enterprise */}
+          <div className="relative flex flex-col rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
+            <div className="mb-6">
+              <div className="mb-2 flex items-center gap-2">
+                <Building2 className="h-5 w-5 text-gray-600" />
+                <h3 className="text-lg font-bold text-gray-900">Enterprise</h3>
+              </div>
+              <p className="mt-2 text-sm font-medium text-gray-500">
+                For operators with 4+ locations
+              </p>
+            </div>
+
+            <div className="mb-8 flex-1">
+              <p className="text-sm leading-relaxed text-gray-600">
+                Custom pricing, dedicated onboarding, and volume discounts for larger operations.
+              </p>
+              <ul className="mt-6 space-y-3">
+                {[
+                  'Everything in Pro',
+                  'Unlimited locations',
+                  'Dedicated onboarding',
+                  'Volume discounts',
+                  'Custom integrations',
+                ].map((f) => (
+                  <li key={f} className="flex items-center gap-3 text-sm text-gray-700">
+                    <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
+                    {f}
                   </li>
                 ))}
               </ul>
-
-              <button
-                onClick={() => handleSubscribe(plan.id)}
-                disabled={loading === plan.id}
-                className={`flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-medium transition-colors disabled:opacity-50 ${
-                  plan.popular
-                    ? 'bg-blue-600 text-white hover:bg-blue-700'
-                    : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                {loading === plan.id ? 'Loading...' : plan.cta}
-                <ArrowRight size={16} />
-              </button>
             </div>
-          ))}
+
+            <a
+              href="mailto:admin@carwashai.com.au"
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white py-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50"
+            >
+              <Mail size={16} />
+              Contact Us
+              <ArrowRight size={16} />
+            </a>
+          </div>
         </div>
       </section>
 
@@ -237,20 +186,20 @@ export default function PricingPage() {
           </h2>
           <div className="space-y-6">
             <FaqItem
-              q="Can I switch plans anytime?"
-              a="Yes. Upgrade or downgrade at any time from your Settings page. Changes take effect immediately, with prorated billing."
+              q="What happens after the 14-day trial?"
+              a="After your free trial, you'll be charged $88/month. You can cancel anytime during the trial and won't be charged."
             />
             <FaqItem
-              q="What happens when I hit 10 reviews on Free?"
-              a="New reviews will still be detected but won't get AI replies. Upgrade to Pro for unlimited reviews and AI-powered responses."
-            />
-            <FaqItem
-              q="Is there a contract?"
-              a="No contracts. All plans are month-to-month. Cancel anytime from your billing portal."
+              q="Can I cancel anytime?"
+              a="Yes. No contracts. Cancel anytime from your Settings page or billing portal. Changes take effect immediately."
             />
             <FaqItem
               q="What does auto-publish do?"
-              a="On the Business plan, AI-generated replies are posted to Google automatically without manual approval. You can still review them in your dashboard."
+              a="AI-generated replies are posted to Google automatically without manual approval. You can still review them in your dashboard."
+            />
+            <FaqItem
+              q="What if I have more than 3 locations?"
+              a="Contact us for Enterprise pricing. We offer volume discounts and dedicated onboarding for larger operations."
             />
           </div>
         </div>
@@ -260,8 +209,7 @@ export default function PricingPage() {
       <footer className="border-t border-gray-200 px-6 py-12">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 sm:flex-row">
           <div className="flex items-center gap-2">
-            <MessageSquareText className="h-5 w-5 text-blue-600" />
-            <span className="font-semibold text-gray-900">ReviewFlow</span>
+            <AppLogo size="small" />
           </div>
           <p className="text-sm text-gray-400">
             © 2026 ReviewFlow. All rights reserved.

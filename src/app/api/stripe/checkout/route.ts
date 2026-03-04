@@ -17,9 +17,9 @@ export async function POST(request: NextRequest) {
 
     const { plan_id } = await request.json()
 
-    if (!plan_id || !['pro', 'business'].includes(plan_id)) {
+    if (!plan_id || !['pro'].includes(plan_id)) {
       return NextResponse.json(
-        { error: 'Invalid plan. Choose "pro" or "business".' },
+        { error: 'Invalid plan.' },
         { status: 400 }
       )
     }

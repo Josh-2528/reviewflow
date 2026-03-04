@@ -20,7 +20,7 @@ export const stripe = new Proxy({} as Stripe, {
 
 // ── Plan definitions ─────────────────────────────────────────────────
 
-export type PlanId = 'free' | 'pro' | 'business'
+export type PlanId = 'free' | 'pro'
 
 export interface PlanDefinition {
   id: PlanId
@@ -38,7 +38,7 @@ export interface PlanDefinition {
 export const PLANS: Record<PlanId, PlanDefinition> = {
   free: {
     id: 'free',
-    name: 'Free',
+    name: 'Free Trial',
     price: 0,
     stripePriceId: null,
     reviewLimit: 10,
@@ -55,33 +55,20 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
   },
   pro: {
     id: 'pro',
-    name: 'Pro',
-    price: 49,
+    name: 'ReviewFlow Pro',
+    price: 88,
     stripePriceId: process.env.STRIPE_PRO_PRICE_ID || '',
     reviewLimit: null,
     features: [
       'Unlimited reviews',
       'AI-generated replies',
       'Auto-polling every 15 min',
-      'Custom tone & instructions',
-      'Activity log & analytics',
-    ],
-    aiReplies: true,
-    autoPolling: true,
-    autoPublish: false,
-    prioritySupport: false,
-  },
-  business: {
-    id: 'business',
-    name: 'Business',
-    price: 99,
-    stripePriceId: process.env.STRIPE_BUSINESS_PRICE_ID || '',
-    reviewLimit: null,
-    features: [
-      'Everything in Pro',
+      'Custom tone & voice',
+      'Email notifications',
       'Auto-publish replies',
+      'Weekly summary emails',
       'Priority support',
-      'Dedicated account manager',
+      'Up to 3 Google Business locations',
     ],
     aiReplies: true,
     autoPolling: true,

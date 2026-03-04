@@ -283,20 +283,20 @@ function DashboardPage() {
           {/* Getting Started Checklist */}
           <GettingStartedChecklist impersonateQs={qsFirst} />
 
-          {/* Free plan upgrade banner */}
+          {/* Upgrade banner */}
           {planId === 'free' && (
-            <div className="mb-6 flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 p-4">
+            <div className="mb-6 flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 p-4">
               <div>
-                <p className="text-sm font-medium text-amber-800">
-                  You&apos;re on the Free plan
+                <p className="text-sm font-medium text-emerald-800">
+                  Start your 14-day free trial
                 </p>
-                <p className="mt-0.5 text-sm text-amber-700">
-                  Upgrade to Pro for AI-generated replies and auto-polling, or Business for full automation.
+                <p className="mt-0.5 text-sm text-emerald-700">
+                  Upgrade to ReviewFlow Pro for AI-generated replies, auto-polling, auto-publish, and more.
                 </p>
               </div>
               <Link
                 href="/pricing"
-                className="shrink-0 rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700"
+                className="shrink-0 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
               >
                 Upgrade
               </Link>

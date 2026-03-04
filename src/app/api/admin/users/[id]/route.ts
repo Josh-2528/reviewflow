@@ -30,9 +30,9 @@ export async function PUT(
     const body = await request.json()
     const { plan_id } = body
 
-    if (!plan_id || !['free', 'pro', 'business'].includes(plan_id)) {
+    if (!plan_id || !['free', 'pro'].includes(plan_id)) {
       return NextResponse.json(
-        { error: 'Invalid plan_id. Must be free, pro, or business.' },
+        { error: 'Invalid plan_id. Must be free or pro.' },
         { status: 400 }
       )
     }
