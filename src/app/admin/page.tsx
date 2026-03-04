@@ -22,7 +22,13 @@ import {
   Eye,
   Palette,
   RotateCcw,
+  Sparkles,
+  Settings,
+  X,
+  Loader2,
+  TestTube,
 } from 'lucide-react'
+import type { AIPromptSettings } from '@/lib/types'
 
 interface AdminUser {
   id: string
@@ -47,7 +53,27 @@ interface Branding {
   primary_color: string
 }
 
-type AdminTab = 'users' | 'branding'
+type AdminTab = 'users' | 'branding' | 'ai-prompts'
+
+const emptyAISettings: Partial<AIPromptSettings> = {
+  base_system_prompt: '',
+  star_1_instructions: '',
+  star_2_instructions: '',
+  star_3_instructions: '',
+  star_4_instructions: '',
+  star_5_instructions: '',
+  business_context: '',
+  custom_instructions: '',
+  contact_email: '',
+  contact_phone: '',
+  contact_reference_style: 'email us at',
+  contact_include_on: 'negative_only',
+  tone: 'friendly',
+  custom_tone_description: '',
+  sign_off: '',
+  do_not_mention: '',
+  always_mention: '',
+}
 
 export default function AdminPage() {
   const [users, setUsers] = useState<AdminUser[]>([])
@@ -59,33 +85,30 @@ export default function AdminPage() {
   const [changingPlan, setChangingPlan] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<AdminTab>('users')
 
-  // Branding state
-  const [branding, setBranding] = useState<Branding>({
-    app_name: 'ReviewFlow',
-    logo_url: null,
-    primary_color: '#2563eb',
-  })
-  const [brandingForm, setBrandingForm] = useState<Branding>({
-    app_name: 'ReviewFlow',
-    logo_url: null,
-    primary_color: '#2563eb',
-  })
+  // Branding
+  const [branding, setBranding] = useState<Branding>({ app_name: 'ReviewFlow', logo_url: null, primary_color: '#2563eb' })
+  const [brandingForm, setBrandingForm] = useState<Branding>({ app_name: 'ReviewFlow', logo_url: null, primary_color: '#2563eb' })
   const [savingBranding, setSavingBranding] = useState(false)
+
+  // Global AI
+  const [globalAI, setGlobalAI] = useState<Partial<AIPromptSettings>>(emptyAISettings)
+  const [savingGlobalAI, setSavingGlobalAI] = useState(false)
+  const [previewingGlobal, setPreviewingGlobal] = useState(false)
+  const [globalPreview, setGlobalPreview] = useState<{ oneStarReply: string; fiveStarReply: string } | null>(null)
+
+  // Customer AI modal
+  const [configUser, setConfigUser] = useState<AdminUser | null>(null)
+  const [customerAI, setCustomerAI] = useState<Partial<AIPromptSettings>>(emptyAISettings)
+  const [savingCustomerAI, setSavingCustomerAI] = useState(false)
+  const [previewingCustomer, setPreviewingCustomer] = useState(false)
+  const [customerPreview, setCustomerPreview] = useState<{ oneStarReply: string; fiveStarReply: string } | null>(null)
 
   const router = useRouter()
 
   const fetchData = async () => {
     const res = await fetch('/api/admin/users')
-    if (res.status === 403) {
-      setError('Access denied. You are not an admin.')
-      setLoading(false)
-      return
-    }
-    if (!res.ok) {
-      setError('Failed to load admin data')
-      setLoading(false)
-      return
-    }
+    if (res.status === 403) { setError('Access denied. You are not an admin.'); setLoading(false); return }
+    if (!res.ok) { setError('Failed to load admin data'); setLoading(false); return }
     const data = await res.json()
     setUsers(data.users)
     setStats(data.stats)
@@ -94,133 +117,113 @@ export default function AdminPage() {
 
   const fetchBranding = async () => {
     const res = await fetch('/api/admin/branding')
-    if (res.ok) {
-      const data = await res.json()
-      setBranding(data)
-      setBrandingForm(data)
-    }
+    if (res.ok) { const data = await res.json(); setBranding(data); setBrandingForm(data) }
   }
 
-  useEffect(() => {
-    fetchData()
-    fetchBranding()
-  }, [])
+  const fetchGlobalAI = async () => {
+    const res = await fetch('/api/admin/ai-prompts')
+    if (res.ok) { const data = await res.json(); if (data.global) setGlobalAI({ ...emptyAISettings, ...data.global }) }
+  }
 
+  useEffect(() => { fetchData(); fetchBranding(); fetchGlobalAI() }, [])
+
+  // ── User handlers ────────────────────────────────
   const handleChangePlan = async (userId: string, planId: string) => {
     setChangingPlan(userId)
     try {
-      const res = await fetch(`/api/admin/users/${userId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan_id: planId }),
-      })
+      const res = await fetch(`/api/admin/users/${userId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ plan_id: planId }) })
       const data = await res.json()
-      if (res.ok) {
-        toast.success(data.message)
-        await fetchData()
-      } else {
-        toast.error(data.error || 'Failed to update plan')
-      }
-    } catch {
-      toast.error('Failed to update plan')
-    }
+      if (res.ok) { toast.success(data.message); await fetchData() } else toast.error(data.error || 'Failed to update plan')
+    } catch { toast.error('Failed to update plan') }
     setChangingPlan(null)
   }
 
   const handleDelete = async (userId: string) => {
     try {
-      const res = await fetch(`/api/admin/users/${userId}`, {
-        method: 'DELETE',
-      })
+      const res = await fetch(`/api/admin/users/${userId}`, { method: 'DELETE' })
       const data = await res.json()
-      if (res.ok) {
-        toast.success(data.message)
-        setConfirmDelete(null)
-        await fetchData()
-      } else {
-        toast.error(data.error || 'Failed to delete user')
-      }
-    } catch {
-      toast.error('Failed to delete user')
-    }
+      if (res.ok) { toast.success(data.message); setConfirmDelete(null); await fetchData() } else toast.error(data.error || 'Failed to delete user')
+    } catch { toast.error('Failed to delete user') }
   }
 
+  // ── Branding handlers ────────────────────────────
   const handleSaveBranding = async () => {
     setSavingBranding(true)
     try {
-      const res = await fetch('/api/admin/branding', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(brandingForm),
-      })
-      const data = await res.json()
-      if (res.ok) {
-        toast.success('Branding updated! Reload the page to see changes everywhere.')
-        setBranding({ ...brandingForm })
-        // Also update the CSS variable right away
-        document.documentElement.style.setProperty(
-          '--color-brand',
-          brandingForm.primary_color
-        )
-      } else {
-        toast.error(data.error || 'Failed to update branding')
-      }
-    } catch {
-      toast.error('Failed to update branding')
-    }
+      const res = await fetch('/api/admin/branding', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(brandingForm) })
+      if (res.ok) { toast.success('Branding updated!'); setBranding({ ...brandingForm }); document.documentElement.style.setProperty('--color-brand', brandingForm.primary_color) }
+      else toast.error('Failed to update branding')
+    } catch { toast.error('Failed to update branding') }
     setSavingBranding(false)
   }
 
-  const handleResetBranding = () => {
-    setBrandingForm({
-      app_name: 'ReviewFlow',
-      logo_url: null,
-      primary_color: '#2563eb',
-    })
+  const handleResetBranding = () => { setBrandingForm({ app_name: 'ReviewFlow', logo_url: null, primary_color: '#2563eb' }) }
+
+  // ── Global AI handlers ───────────────────────────
+  const handleSaveGlobalAI = async () => {
+    setSavingGlobalAI(true)
+    try {
+      const res = await fetch('/api/admin/ai-prompts', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: null, ...globalAI }) })
+      if (res.ok) toast.success('Global AI settings saved')
+      else toast.error('Failed to save AI settings')
+    } catch { toast.error('Failed to save AI settings') }
+    setSavingGlobalAI(false)
   }
 
-  const handleLogout = async () => {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    router.push('/')
+  const handlePreviewGlobal = async () => {
+    setPreviewingGlobal(true); setGlobalPreview(null)
+    try {
+      const res = await fetch('/api/admin/ai-prompts/preview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ settings: globalAI, businessName: 'Sample Car Wash', businessLocation: 'Melbourne, Australia' }) })
+      if (res.ok) setGlobalPreview(await res.json())
+      else toast.error('Failed to generate preview')
+    } catch { toast.error('Failed to generate preview') }
+    setPreviewingGlobal(false)
   }
 
-  const filteredUsers = users.filter(
-    (u) =>
-      u.email.toLowerCase().includes(search.toLowerCase()) ||
-      (u.business_name || '').toLowerCase().includes(search.toLowerCase())
+  // ── Customer AI handlers ─────────────────────────
+  const handleOpenCustomerConfig = async (user: AdminUser) => {
+    setConfigUser(user); setCustomerAI(emptyAISettings); setCustomerPreview(null)
+    const res = await fetch(`/api/admin/ai-prompts?user_id=${user.id}`)
+    if (res.ok) { const data = await res.json(); if (data.customer) setCustomerAI({ ...emptyAISettings, ...data.customer }) }
+  }
+
+  const handleSaveCustomerAI = async () => {
+    if (!configUser) return
+    setSavingCustomerAI(true)
+    try {
+      const res = await fetch('/api/admin/ai-prompts', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: configUser.id, ...customerAI }) })
+      if (res.ok) toast.success(`AI settings saved for ${configUser.email}`)
+      else toast.error('Failed to save AI settings')
+    } catch { toast.error('Failed to save AI settings') }
+    setSavingCustomerAI(false)
+  }
+
+  const handlePreviewCustomer = async () => {
+    if (!configUser) return
+    setPreviewingCustomer(true); setCustomerPreview(null)
+    try {
+      const res = await fetch('/api/admin/ai-prompts/preview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ settings: customerAI, businessName: configUser.business_name || 'Sample Car Wash', businessLocation: 'Melbourne, Australia' }) })
+      if (res.ok) setCustomerPreview(await res.json())
+      else toast.error('Failed to generate preview')
+    } catch { toast.error('Failed to generate preview') }
+    setPreviewingCustomer(false)
+  }
+
+  const handleLogout = async () => { const supabase = createClient(); await supabase.auth.signOut(); router.push('/') }
+
+  const filteredUsers = users.filter(u => u.email.toLowerCase().includes(search.toLowerCase()) || (u.business_name || '').toLowerCase().includes(search.toLowerCase()))
+  const brandingHasChanges = brandingForm.app_name !== branding.app_name || brandingForm.logo_url !== branding.logo_url || brandingForm.primary_color !== branding.primary_color
+
+  if (loading) return <div className="flex min-h-screen items-center justify-center bg-gray-50"><p className="text-gray-400">Loading admin panel...</p></div>
+  if (error) return (
+    <div className="flex min-h-screen items-center justify-center bg-gray-50">
+      <div className="text-center">
+        <Shield className="mx-auto mb-4 h-12 w-12 text-red-400" />
+        <p className="text-lg font-semibold text-gray-900">{error}</p>
+        <Link href="/dashboard" className="mt-4 inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700"><ArrowLeft size={14} />Back to Dashboard</Link>
+      </div>
+    </div>
   )
-
-  const brandingHasChanges =
-    brandingForm.app_name !== branding.app_name ||
-    brandingForm.logo_url !== branding.logo_url ||
-    brandingForm.primary_color !== branding.primary_color
-
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
-        <p className="text-gray-400">Loading admin panel...</p>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <Shield className="mx-auto mb-4 h-12 w-12 text-red-400" />
-          <p className="text-lg font-semibold text-gray-900">{error}</p>
-          <Link
-            href="/dashboard"
-            className="mt-4 inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700"
-          >
-            <ArrowLeft size={14} />
-            Back to Dashboard
-          </Link>
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -228,22 +231,13 @@ export default function AdminPage() {
       <header className="sticky top-0 z-30 border-b border-gray-200 bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-4">
-            <Link href="/dashboard" className="text-gray-400 hover:text-gray-600">
-              <ArrowLeft size={20} />
-            </Link>
+            <Link href="/dashboard" className="text-gray-400 hover:text-gray-600"><ArrowLeft size={20} /></Link>
             <div className="flex items-center gap-2">
               <AppLogo />
-              <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">
-                Admin
-              </span>
+              <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">Admin</span>
             </div>
           </div>
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-2 rounded-lg p-2 text-sm text-gray-600 hover:bg-gray-100"
-          >
-            <LogOut size={16} />
-          </button>
+          <button onClick={handleLogout} className="flex items-center gap-2 rounded-lg p-2 text-sm text-gray-600 hover:bg-gray-100"><LogOut size={16} /></button>
         </div>
       </header>
 
@@ -251,94 +245,40 @@ export default function AdminPage() {
         {/* Stats */}
         {stats && (
           <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <StatCard
-              icon={<Users className="h-5 w-5 text-blue-500" />}
-              label="Total Users"
-              value={stats.total_users.toLocaleString()}
-            />
-            <StatCard
-              icon={<Star className="h-5 w-5 text-amber-500" />}
-              label="Total Reviews Processed"
-              value={stats.total_reviews.toLocaleString()}
-            />
-            <StatCard
-              icon={<DollarSign className="h-5 w-5 text-green-500" />}
-              label="Monthly Recurring Revenue"
-              value={`$${stats.mrr.toLocaleString()}`}
-            />
+            <StatCard icon={<Users className="h-5 w-5 text-blue-500" />} label="Total Users" value={stats.total_users.toLocaleString()} />
+            <StatCard icon={<Star className="h-5 w-5 text-amber-500" />} label="Total Reviews Processed" value={stats.total_reviews.toLocaleString()} />
+            <StatCard icon={<DollarSign className="h-5 w-5 text-green-500" />} label="Monthly Recurring Revenue" value={`$${stats.mrr.toLocaleString()}`} />
           </div>
         )}
 
         {/* Tab bar */}
         <div className="mb-6 flex gap-1 rounded-lg border border-gray-200 bg-white p-1">
-          <button
-            onClick={() => setActiveTab('users')}
-            className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
-              activeTab === 'users'
-                ? 'bg-blue-600 text-white'
-                : 'text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            <Users size={16} />
-            Users
-          </button>
-          <button
-            onClick={() => setActiveTab('branding')}
-            className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
-              activeTab === 'branding'
-                ? 'bg-blue-600 text-white'
-                : 'text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            <Palette size={16} />
-            Branding
-          </button>
+          {([['users', Users, 'Users'], ['ai-prompts', Sparkles, 'AI Prompts'], ['branding', Palette, 'Branding']] as const).map(([key, Icon, label]) => (
+            <button key={key} onClick={() => setActiveTab(key as AdminTab)} className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors ${activeTab === key ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+              <Icon size={16} />{label}
+            </button>
+          ))}
         </div>
 
-        {/* Users tab */}
+        {/* ═══════════════ USERS TAB ═══════════════ */}
         {activeTab === 'users' && (
           <>
-            {/* Search */}
             <div className="mb-6 flex items-center gap-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search by email or business name..."
-                  className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
+                <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by email or business name..." className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
               </div>
-              <p className="shrink-0 text-sm text-gray-500">
-                {filteredUsers.length} user{filteredUsers.length === 1 ? '' : 's'}
-              </p>
+              <p className="shrink-0 text-sm text-gray-500">{filteredUsers.length} user{filteredUsers.length === 1 ? '' : 's'}</p>
             </div>
 
-            {/* Users table */}
             <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[800px]">
+                <table className="w-full min-w-[900px]">
                   <thead>
                     <tr className="border-b border-gray-100 bg-gray-50">
-                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                        User
-                      </th>
-                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                        Signed Up
-                      </th>
-                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                        Plan
-                      </th>
-                      <th className="px-5 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-500">
-                        Reviews
-                      </th>
-                      <th className="px-5 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-500">
-                        Google
-                      </th>
-                      <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">
-                        Actions
-                      </th>
+                      {['User', 'Signed Up', 'Plan', 'Reviews', 'Google', 'Actions'].map((h, i) => (
+                        <th key={h} className={`px-5 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 ${i === 3 || i === 4 ? 'text-center' : i === 5 ? 'text-right' : 'text-left'}`}>{h}</th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -346,99 +286,43 @@ export default function AdminPage() {
                       <tr key={user.id} className="hover:bg-gray-50">
                         <td className="px-5 py-4">
                           <p className="text-sm font-medium text-gray-900">{user.email}</p>
-                          {user.business_name && (
-                            <p className="mt-0.5 text-xs text-gray-500">{user.business_name}</p>
-                          )}
+                          {user.business_name && <p className="mt-0.5 text-xs text-gray-500">{user.business_name}</p>}
                         </td>
-                        <td className="px-5 py-4">
-                          <p className="text-sm text-gray-600">
-                            {format(new Date(user.created_at), 'MMM d, yyyy')}
-                          </p>
-                        </td>
+                        <td className="px-5 py-4"><p className="text-sm text-gray-600">{format(new Date(user.created_at), 'MMM d, yyyy')}</p></td>
                         <td className="px-5 py-4">
                           <div className="relative inline-block">
-                            <select
-                              value={user.plan_id || 'free'}
-                              onChange={(e) => handleChangePlan(user.id, e.target.value)}
-                              disabled={changingPlan === user.id}
-                              className={`appearance-none rounded-full py-1 pl-3 pr-7 text-xs font-medium disabled:opacity-50 ${
-                                user.plan_id === 'pro'
-                                  ? 'bg-emerald-100 text-emerald-700'
-                                  : 'bg-gray-100 text-gray-600'
-                              }`}
-                            >
+                            <select value={user.plan_id || 'free'} onChange={(e) => handleChangePlan(user.id, e.target.value)} disabled={changingPlan === user.id} className={`appearance-none rounded-full py-1 pl-3 pr-7 text-xs font-medium disabled:opacity-50 ${user.plan_id === 'pro' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'}`}>
                               <option value="free">Free</option>
                               <option value="pro">Pro ($88/mo)</option>
                             </select>
-                            <ChevronDown
-                              size={12}
-                              className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-gray-400"
-                            />
+                            <ChevronDown size={12} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-gray-400" />
                           </div>
                         </td>
+                        <td className="px-5 py-4 text-center"><span className="text-sm font-medium text-gray-900">{user.review_count}</span></td>
                         <td className="px-5 py-4 text-center">
-                          <span className="text-sm font-medium text-gray-900">
-                            {user.review_count}
-                          </span>
-                        </td>
-                        <td className="px-5 py-4 text-center">
-                          {user.google_connected ? (
-                            <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600">
-                              <Link2 size={12} />
-                              Connected
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 text-xs text-gray-400">
-                              <Unplug size={12} />
-                              No
-                            </span>
-                          )}
+                          {user.google_connected
+                            ? <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600"><Link2 size={12} />Connected</span>
+                            : <span className="inline-flex items-center gap-1 text-xs text-gray-400"><Unplug size={12} />No</span>}
                         </td>
                         <td className="px-5 py-4 text-right">
                           {confirmDelete === user.id ? (
                             <div className="flex items-center justify-end gap-2">
                               <span className="text-xs text-red-600">Delete?</span>
-                              <button
-                                onClick={() => handleDelete(user.id)}
-                                className="rounded-md bg-red-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-red-700"
-                              >
-                                Yes
-                              </button>
-                              <button
-                                onClick={() => setConfirmDelete(null)}
-                                className="rounded-md border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50"
-                              >
-                                No
-                              </button>
+                              <button onClick={() => handleDelete(user.id)} className="rounded-md bg-red-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-red-700">Yes</button>
+                              <button onClick={() => setConfirmDelete(null)} className="rounded-md border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50">No</button>
                             </div>
                           ) : (
                             <div className="flex items-center justify-end gap-1">
-                              <Link
-                                href={`/dashboard?impersonate=${user.id}`}
-                                className="rounded-lg p-1.5 text-gray-400 hover:bg-blue-50 hover:text-blue-600"
-                                title="View as this user"
-                              >
-                                <Eye size={15} />
-                              </Link>
-                              <button
-                                onClick={() => setConfirmDelete(user.id)}
-                                className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
-                                title="Delete user"
-                              >
-                                <Trash2 size={15} />
-                              </button>
+                              <button onClick={() => handleOpenCustomerConfig(user)} className="rounded-lg p-1.5 text-gray-400 hover:bg-purple-50 hover:text-purple-600" title="Configure AI"><Settings size={15} /></button>
+                              <Link href={`/dashboard?impersonate=${user.id}`} className="rounded-lg p-1.5 text-gray-400 hover:bg-blue-50 hover:text-blue-600" title="View as this user"><Eye size={15} /></Link>
+                              <button onClick={() => setConfirmDelete(user.id)} className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600" title="Delete user"><Trash2 size={15} /></button>
                             </div>
                           )}
                         </td>
                       </tr>
                     ))}
-
                     {filteredUsers.length === 0 && (
-                      <tr>
-                        <td colSpan={6} className="px-5 py-12 text-center text-sm text-gray-400">
-                          {search ? 'No users match your search' : 'No users yet'}
-                        </td>
-                      </tr>
+                      <tr><td colSpan={6} className="px-5 py-12 text-center text-sm text-gray-400">{search ? 'No users match your search' : 'No users yet'}</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -447,265 +331,252 @@ export default function AdminPage() {
           </>
         )}
 
-        {/* Branding tab */}
+        {/* ═══════════════ AI PROMPTS TAB ═══════════════ */}
+        {activeTab === 'ai-prompts' && (
+          <div className="mx-auto max-w-3xl">
+            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+              <div className="mb-6 flex items-center gap-3">
+                <Sparkles className="h-5 w-5 text-purple-600" />
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">Global AI Defaults</h2>
+                  <p className="text-sm text-gray-500">These apply to all customers unless they have custom overrides.</p>
+                </div>
+              </div>
+
+              <div className="mb-5">
+                <label className="mb-1.5 block text-sm font-medium text-gray-700">Base System Prompt</label>
+                <textarea value={globalAI.base_system_prompt || ''} onChange={(e) => setGlobalAI({ ...globalAI, base_system_prompt: e.target.value })} rows={5} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="Master system prompt sent to Claude for every reply..." />
+              </div>
+
+              <div className="mb-6">
+                <p className="mb-3 text-sm font-medium text-gray-700">Star Rating Templates</p>
+                {[1, 2, 3, 4, 5].map((star) => {
+                  const key = `star_${star}_instructions` as keyof typeof globalAI
+                  return (
+                    <div key={star} className="mb-3">
+                      <label className="mb-1 flex items-center gap-1.5 text-sm text-gray-600">{'⭐'.repeat(star)} {star}-Star Instructions</label>
+                      <textarea value={(globalAI[key] as string) || ''} onChange={(e) => setGlobalAI({ ...globalAI, [key]: e.target.value })} rows={3} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                    </div>
+                  )
+                })}
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button onClick={handleSaveGlobalAI} disabled={savingGlobalAI} className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">{savingGlobalAI ? 'Saving...' : 'Save Global Defaults'}</button>
+                <button onClick={handlePreviewGlobal} disabled={previewingGlobal} className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50">
+                  {previewingGlobal ? <Loader2 size={14} className="animate-spin" /> : <TestTube size={14} />}Preview Replies
+                </button>
+              </div>
+
+              {globalPreview && (
+                <div className="mt-6 space-y-4">
+                  <PreviewCard title="1-Star Review Reply" review="Terrible experience. The machine ate my $20 note and nobody was around to help." reply={globalPreview.oneStarReply} stars={1} />
+                  <PreviewCard title="5-Star Review Reply" review="Best car wash in the area! Got the full detail package and my car has never looked this good." reply={globalPreview.fiveStarReply} stars={5} />
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ═══════════════ BRANDING TAB ═══════════════ */}
         {activeTab === 'branding' && (
           <div className="mx-auto max-w-2xl">
             <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
               <div className="mb-6 flex items-center gap-3">
                 <Palette className="h-5 w-5 text-blue-600" />
-                <h2 className="text-lg font-semibold text-gray-900">
-                  White-Label Branding
-                </h2>
+                <h2 className="text-lg font-semibold text-gray-900">White-Label Branding</h2>
+              </div>
+              <p className="mb-6 text-sm text-gray-500">Customize how the app appears to your users.</p>
+
+              <div className="mb-5">
+                <label className="mb-1.5 block text-sm font-medium text-gray-700">App Name</label>
+                <input type="text" value={brandingForm.app_name} onChange={(e) => setBrandingForm({ ...brandingForm, app_name: e.target.value })} placeholder="ReviewFlow" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
               </div>
 
-              <p className="mb-6 text-sm text-gray-500">
-                Customize how the app appears to your users. Change the name, logo, and
-                primary color to match your brand.
-              </p>
-
-              {/* App Name */}
               <div className="mb-5">
-                <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                  App Name
-                </label>
-                <input
-                  type="text"
-                  value={brandingForm.app_name}
-                  onChange={(e) =>
-                    setBrandingForm({ ...brandingForm, app_name: e.target.value })
-                  }
-                  placeholder="ReviewFlow"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-                <p className="mt-1 text-xs text-gray-400">
-                  This replaces &quot;ReviewFlow&quot; across the entire app.
-                </p>
-              </div>
-
-              {/* Logo URL */}
-              <div className="mb-5">
-                <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                  Logo URL
-                </label>
-                <input
-                  type="url"
-                  value={brandingForm.logo_url || ''}
-                  onChange={(e) =>
-                    setBrandingForm({
-                      ...brandingForm,
-                      logo_url: e.target.value || null,
-                    })
-                  }
-                  placeholder="https://example.com/logo.png"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-                <p className="mt-1 text-xs text-gray-400">
-                  Paste a URL to your logo image. Recommended: square, 128×128px or
-                  larger. Leave empty to use the default icon.
-                </p>
+                <label className="mb-1.5 block text-sm font-medium text-gray-700">Logo URL</label>
+                <input type="url" value={brandingForm.logo_url || ''} onChange={(e) => setBrandingForm({ ...brandingForm, logo_url: e.target.value || null })} placeholder="https://example.com/logo.png" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
                 {brandingForm.logo_url && (
                   <div className="mt-3 flex items-center gap-3">
                     <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 p-1">
-                      <img
-                        src={brandingForm.logo_url}
-                        alt="Logo preview"
-                        className="h-full w-full object-contain"
-                        onError={(e) => {
-                          ;(e.target as HTMLImageElement).style.display = 'none'
-                        }}
-                      />
+                      <img src={brandingForm.logo_url} alt="Logo preview" className="h-full w-full object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
                     </div>
                     <span className="text-xs text-gray-500">Preview</span>
                   </div>
                 )}
               </div>
 
-              {/* Primary Color */}
               <div className="mb-6">
-                <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                  Primary Brand Color
-                </label>
+                <label className="mb-1.5 block text-sm font-medium text-gray-700">Primary Brand Color</label>
                 <div className="flex items-center gap-3">
-                  <input
-                    type="color"
-                    value={brandingForm.primary_color}
-                    onChange={(e) =>
-                      setBrandingForm({
-                        ...brandingForm,
-                        primary_color: e.target.value,
-                      })
-                    }
-                    className="h-10 w-14 cursor-pointer rounded-lg border border-gray-300"
-                  />
-                  <input
-                    type="text"
-                    value={brandingForm.primary_color}
-                    onChange={(e) => {
-                      const v = e.target.value
-                      if (/^#[0-9a-fA-F]{0,6}$/.test(v)) {
-                        setBrandingForm({ ...brandingForm, primary_color: v })
-                      }
-                    }}
-                    placeholder="#2563eb"
-                    className="w-28 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
-                  <div
-                    className="h-10 flex-1 rounded-lg"
-                    style={{ backgroundColor: brandingForm.primary_color }}
-                  />
-                </div>
-                <p className="mt-1 text-xs text-gray-400">
-                  Used for buttons, links, icons, and accents across the app.
-                </p>
-              </div>
-
-              {/* Live Preview */}
-              <div className="mb-6 rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4">
-                <p className="mb-3 text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Live Preview
-                </p>
-                <div className="flex items-center gap-3">
-                  {brandingForm.logo_url ? (
-                    <img
-                      src={brandingForm.logo_url}
-                      alt="Preview"
-                      className="h-8 w-8 object-contain"
-                    />
-                  ) : (
-                    <div
-                      className="flex h-8 w-8 items-center justify-center rounded"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke={brandingForm.primary_color}
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="h-6 w-6"
-                      >
-                        <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
-                      </svg>
-                    </div>
-                  )}
-                  <span className="text-lg font-bold text-gray-900">
-                    {brandingForm.app_name || 'ReviewFlow'}
-                  </span>
-                </div>
-                <div className="mt-3 flex gap-2">
-                  <button
-                    className="rounded-lg px-4 py-2 text-sm font-medium text-white"
-                    style={{ backgroundColor: brandingForm.primary_color }}
-                  >
-                    Sample Button
-                  </button>
-                  <button
-                    className="rounded-lg border px-4 py-2 text-sm font-medium"
-                    style={{
-                      borderColor: brandingForm.primary_color,
-                      color: brandingForm.primary_color,
-                    }}
-                  >
-                    Outline Button
-                  </button>
+                  <input type="color" value={brandingForm.primary_color} onChange={(e) => setBrandingForm({ ...brandingForm, primary_color: e.target.value })} className="h-10 w-14 cursor-pointer rounded-lg border border-gray-300" />
+                  <input type="text" value={brandingForm.primary_color} onChange={(e) => { if (/^#[0-9a-fA-F]{0,6}$/.test(e.target.value)) setBrandingForm({ ...brandingForm, primary_color: e.target.value }) }} placeholder="#2563eb" className="w-28 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                  <div className="h-10 flex-1 rounded-lg" style={{ backgroundColor: brandingForm.primary_color }} />
                 </div>
               </div>
 
-              {/* Actions */}
               <div className="flex items-center gap-3">
-                <button
-                  onClick={handleSaveBranding}
-                  disabled={!brandingHasChanges || savingBranding}
-                  className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {savingBranding ? 'Saving...' : 'Save Branding'}
-                </button>
-                <button
-                  onClick={handleResetBranding}
-                  className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
-                >
-                  <RotateCcw size={14} />
-                  Reset to Default
-                </button>
-              </div>
-
-              {/* Custom Domain Guide */}
-              <div className="mt-8 border-t border-gray-200 pt-6">
-                <h3 className="mb-3 text-sm font-semibold text-gray-900">
-                  Custom Domain Setup
-                </h3>
-                <div className="rounded-lg bg-blue-50 p-4 text-sm text-blue-900">
-                  <p className="mb-2 font-medium">
-                    Point your own domain to this app:
-                  </p>
-                  <ol className="ml-4 list-decimal space-y-1.5 text-blue-800">
-                    <li>
-                      In your DNS provider, add a <strong>CNAME</strong> record
-                      pointing your domain (e.g.{' '}
-                      <code className="rounded bg-blue-100 px-1.5 py-0.5 text-xs">
-                        reviews.yourbrand.com
-                      </code>
-                      ) to{' '}
-                      <code className="rounded bg-blue-100 px-1.5 py-0.5 text-xs">
-                        cname.vercel-dns.com
-                      </code>
-                    </li>
-                    <li>
-                      In your{' '}
-                      <a
-                        href="https://vercel.com/dashboard"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-medium underline"
-                      >
-                        Vercel Dashboard
-                      </a>
-                      , go to <strong>Settings → Domains</strong> and add your
-                      custom domain
-                    </li>
-                    <li>
-                      Vercel will auto-provision an SSL certificate (takes ~5
-                      minutes)
-                    </li>
-                    <li>
-                      Update <code className="rounded bg-blue-100 px-1.5 py-0.5 text-xs">NEXT_PUBLIC_APP_URL</code>{' '}
-                      in your environment variables to match the new domain
-                    </li>
-                  </ol>
-                  <p className="mt-3 text-xs text-blue-700">
-                    Once your domain is set up, the branding above will apply
-                    automatically — making the app fully white-labeled under your
-                    brand.
-                  </p>
-                </div>
+                <button onClick={handleSaveBranding} disabled={!brandingHasChanges || savingBranding} className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">{savingBranding ? 'Saving...' : 'Save Branding'}</button>
+                <button onClick={handleResetBranding} className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50"><RotateCcw size={14} />Reset to Default</button>
               </div>
             </div>
           </div>
         )}
       </main>
+
+      {/* ═══════════════ CUSTOMER AI CONFIG MODAL ═══════════════ */}
+      {configUser && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 pt-12">
+          <div className="relative w-full max-w-3xl rounded-2xl bg-white shadow-2xl">
+            {/* Modal header */}
+            <div className="flex items-center justify-between border-b px-6 py-4">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Configure AI — {configUser.business_name || configUser.email}</h2>
+                <p className="text-sm text-gray-500">Customer-specific overrides. Blank fields fall back to global defaults.</p>
+              </div>
+              <button onClick={() => setConfigUser(null)} className="rounded-lg p-2 text-gray-400 hover:bg-gray-100"><X size={20} /></button>
+            </div>
+
+            {/* Modal body */}
+            <div className="max-h-[calc(100vh-200px)] overflow-y-auto px-6 py-6">
+              {/* Business Context */}
+              <Section title="Business Context" description="Specific details the AI should know about this business.">
+                <textarea value={customerAI.business_context || ''} onChange={(e) => setCustomerAI({ ...customerAI, business_context: e.target.value })} rows={4} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder='e.g. "Self-serve car wash with 8 bays. Touch-free and manual options..."' />
+              </Section>
+
+              {/* Custom Instructions */}
+              <Section title="Custom Instructions" description="Specific rules for this customer's replies.">
+                <textarea value={customerAI.custom_instructions || ''} onChange={(e) => setCustomerAI({ ...customerAI, custom_instructions: e.target.value })} rows={4} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder='e.g. "Always mention they can email for issues. Never offer refunds."' />
+              </Section>
+
+              {/* Contact Details */}
+              <Section title="Contact Details for Replies" description="How the AI should direct unhappy customers.">
+                <div className="grid grid-cols-2 gap-4 mb-3">
+                  <div>
+                    <label className="mb-1 block text-sm text-gray-600">Contact Email</label>
+                    <input type="email" value={customerAI.contact_email || ''} onChange={(e) => setCustomerAI({ ...customerAI, contact_email: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="camden@gmail.com" />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm text-gray-600">Contact Phone (optional)</label>
+                    <input type="text" value={customerAI.contact_phone || ''} onChange={(e) => setCustomerAI({ ...customerAI, contact_phone: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="0400 123 456" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="mb-1 block text-sm text-gray-600">Reference Style</label>
+                    <input type="text" value={customerAI.contact_reference_style || ''} onChange={(e) => setCustomerAI({ ...customerAI, contact_reference_style: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="email us at" />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm text-gray-600">Include Contact On</label>
+                    <select value={customerAI.contact_include_on || 'negative_only'} onChange={(e) => setCustomerAI({ ...customerAI, contact_include_on: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                      <option value="negative_only">Only on negative reviews (1-3 stars)</option>
+                      <option value="always">On all reviews</option>
+                      <option value="never">Never</option>
+                    </select>
+                  </div>
+                </div>
+              </Section>
+
+              {/* Tone */}
+              <Section title="Tone" description="How the AI replies should sound.">
+                <select value={customerAI.tone || 'friendly'} onChange={(e) => setCustomerAI({ ...customerAI, tone: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 mb-3">
+                  <option value="friendly">Friendly & Casual</option>
+                  <option value="professional">Professional & Warm</option>
+                  <option value="formal">Formal & Corporate</option>
+                  <option value="custom">Custom</option>
+                </select>
+                {customerAI.tone === 'custom' && (
+                  <textarea value={customerAI.custom_tone_description || ''} onChange={(e) => setCustomerAI({ ...customerAI, custom_tone_description: e.target.value })} rows={2} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="Describe the custom tone..." />
+                )}
+              </Section>
+
+              {/* Sign-off */}
+              <Section title="Sign-off Style" description="How to end replies. Leave blank for no specific sign-off.">
+                <input type="text" value={customerAI.sign_off || ''} onChange={(e) => setCustomerAI({ ...customerAI, sign_off: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder='e.g. "The team at Camden Car Wash" or "Thanks, Jordan @ V8 Auto"' />
+              </Section>
+
+              {/* Do Not Mention */}
+              <Section title="Do NOT Mention" description="Things the AI should never say in replies.">
+                <textarea value={customerAI.do_not_mention || ''} onChange={(e) => setCustomerAI({ ...customerAI, do_not_mention: e.target.value })} rows={3} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder='e.g. "Never mention competitor car washes. Never say the word cheap."' />
+              </Section>
+
+              {/* Always Mention */}
+              <Section title="Always Mention" description="Things to always include when relevant.">
+                <textarea value={customerAI.always_mention || ''} onChange={(e) => setCustomerAI({ ...customerAI, always_mention: e.target.value })} rows={3} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder='e.g. "Mention our new express detail service when relevant."' />
+              </Section>
+
+              {/* Star Rating Overrides */}
+              <Section title="Star Rating Overrides" description="Override global defaults for this customer. Leave blank to use global templates.">
+                {[1, 2, 3, 4, 5].map((star) => {
+                  const key = `star_${star}_instructions` as keyof typeof customerAI
+                  return (
+                    <div key={star} className="mb-3">
+                      <label className="mb-1 flex items-center gap-1.5 text-sm text-gray-600">{'⭐'.repeat(star)} {star}-Star Override</label>
+                      <textarea value={(customerAI[key] as string) || ''} onChange={(e) => setCustomerAI({ ...customerAI, [key]: e.target.value })} rows={2} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="Leave blank to use global default" />
+                    </div>
+                  )
+                })}
+              </Section>
+
+              {/* Preview Results */}
+              {customerPreview && (
+                <div className="mt-2 space-y-4">
+                  <PreviewCard title="1-Star Review Reply" review="Terrible experience. The machine ate my $20 note and nobody was around to help." reply={customerPreview.oneStarReply} stars={1} />
+                  <PreviewCard title="5-Star Review Reply" review="Best car wash in the area! Got the full detail package and my car has never looked this good." reply={customerPreview.fiveStarReply} stars={5} />
+                </div>
+              )}
+            </div>
+
+            {/* Modal footer */}
+            <div className="flex items-center justify-between border-t px-6 py-4">
+              <button onClick={handlePreviewCustomer} disabled={previewingCustomer} className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50">
+                {previewingCustomer ? <Loader2 size={14} className="animate-spin" /> : <TestTube size={14} />}Preview Replies
+              </button>
+              <div className="flex items-center gap-3">
+                <button onClick={() => setConfigUser(null)} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</button>
+                <button onClick={handleSaveCustomerAI} disabled={savingCustomerAI} className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">{savingCustomerAI ? 'Saving...' : 'Save Settings'}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
-function StatCard({
-  icon,
-  label,
-  value,
-}: {
-  icon: React.ReactNode
-  label: string
-  value: string
-}) {
+// ── Helpers ──────────────────────────────────────────
+
+function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-      <div className="mb-2 flex items-center gap-2">
-        {icon}
-        <span className="text-xs font-medium uppercase tracking-wider text-gray-500">
-          {label}
-        </span>
-      </div>
+      <div className="mb-2 flex items-center gap-2">{icon}<span className="text-xs font-medium uppercase tracking-wider text-gray-500">{label}</span></div>
       <p className="text-3xl font-bold text-gray-900">{value}</p>
+    </div>
+  )
+}
+
+function Section({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
+  return (
+    <div className="mb-6">
+      <h3 className="mb-1 text-sm font-semibold text-gray-900">{title}</h3>
+      <p className="mb-2 text-xs text-gray-500">{description}</p>
+      {children}
+    </div>
+  )
+}
+
+function PreviewCard({ title, review, reply, stars }: { title: string; review: string; reply: string; stars: number }) {
+  return (
+    <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+      <div className="mb-2 flex items-center gap-2">
+        <span className="text-sm">{'⭐'.repeat(stars)}</span>
+        <span className="text-sm font-medium text-gray-700">{title}</span>
+      </div>
+      <p className="mb-3 text-sm italic text-gray-500">&ldquo;{review}&rdquo;</p>
+      <div className="rounded-lg bg-white border border-gray-200 p-3">
+        <p className="text-xs font-medium uppercase tracking-wide text-blue-600 mb-1">AI Reply</p>
+        <p className="text-sm text-gray-700">{reply}</p>
+      </div>
     </div>
   )
 }

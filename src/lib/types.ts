@@ -79,6 +79,30 @@ export interface BrandingSettings {
   primary_color: string
 }
 
+export interface AIPromptSettings {
+  id: string
+  user_id: string | null
+  base_system_prompt: string | null
+  star_1_instructions: string | null
+  star_2_instructions: string | null
+  star_3_instructions: string | null
+  star_4_instructions: string | null
+  star_5_instructions: string | null
+  business_context: string | null
+  custom_instructions: string | null
+  contact_email: string | null
+  contact_phone: string | null
+  contact_reference_style: string | null
+  contact_include_on: string | null
+  tone: string | null
+  custom_tone_description: string | null
+  sign_off: string | null
+  do_not_mention: string | null
+  always_mention: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface OnboardingProgress {
   google_connected: boolean
   has_reviewed_reply: boolean

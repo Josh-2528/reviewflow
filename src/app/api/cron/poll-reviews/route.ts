@@ -108,12 +108,14 @@ export async function GET(request: NextRequest) {
         // Generate AI reply
         try {
           const replyText = await generateReviewReply({
+            userId: user.id,
             businessName: user.business_name || 'Our Business',
             businessLocation: user.business_location || '',
             tonePreference: user.tone_preference || 'friendly and professional',
             customInstructions: user.custom_instructions,
             starRating: parsed.star_rating,
             reviewText: parsed.review_text,
+            reviewerName: parsed.reviewer_name,
           })
 
           await adminClient.from('replies').insert({

@@ -132,12 +132,14 @@ export async function POST() {
       // Generate AI reply
       try {
         const replyText = await generateReviewReply({
+          userId: user.id,
           businessName: profile.business_name || 'Our Business',
           businessLocation: profile.business_location || '',
           tonePreference: profile.tone_preference || 'friendly and professional',
           customInstructions: profile.custom_instructions,
           starRating: parsed.star_rating,
           reviewText: parsed.review_text,
+          reviewerName: parsed.reviewer_name,
         })
 
         // Save reply
@@ -210,12 +212,14 @@ export async function POST() {
         // Retry once
         try {
           const replyText = await generateReviewReply({
+            userId: user.id,
             businessName: profile.business_name || 'Our Business',
             businessLocation: profile.business_location || '',
             tonePreference: profile.tone_preference || 'friendly and professional',
             customInstructions: profile.custom_instructions,
             starRating: parsed.star_rating,
             reviewText: parsed.review_text,
+            reviewerName: parsed.reviewer_name,
           })
 
           await adminClient.from('replies').insert({
