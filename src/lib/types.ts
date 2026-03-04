@@ -10,6 +10,7 @@ export interface User {
   tone_preference: string
   custom_instructions: string | null
   auto_publish: boolean
+  auto_publish_stars: number[]
   onboarding_completed: boolean
   google_connected: boolean
   stripe_customer_id: string | null
@@ -46,6 +47,7 @@ export interface Reply {
   edited_text: string | null
   final_text: string
   status: 'pending' | 'approved' | 'published' | 'rejected'
+  auto_published: boolean
   published_at: string | null
   created_at: string
 }

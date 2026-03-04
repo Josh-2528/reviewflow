@@ -22,6 +22,7 @@ export async function PUT(request: NextRequest) {
       'tone_preference',
       'custom_instructions',
       'auto_publish',
+      'auto_publish_stars',
       'google_account_id',
       'google_location_id',
       'google_connected',

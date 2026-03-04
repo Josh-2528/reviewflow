@@ -593,6 +593,11 @@ function ReviewCard({
             <p className="text-xs font-medium uppercase tracking-wide text-green-600">
               Published Reply
             </p>
+            {review.reply.auto_published && (
+              <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-700">
+                Auto-published
+              </span>
+            )}
             {review.reply.published_at && (
               <span className="text-xs text-gray-400">
                 · {format(new Date(review.reply.published_at), 'MMM d, yyyy h:mm a')}

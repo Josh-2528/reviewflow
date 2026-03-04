@@ -49,7 +49,7 @@ function SettingsPage() {
   const [businessLocation, setBusinessLocation] = useState('')
   const [tonePreference, setTonePreference] = useState('')
   const [customInstructions, setCustomInstructions] = useState('')
-  const [autoPublish, setAutoPublish] = useState(false)
+  const [autoPublishStars, setAutoPublishStars] = useState<number[]>([4, 5])
   const [emailNewReview, setEmailNewReview] = useState(true)
   const [emailWeeklySummary, setEmailWeeklySummary] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -72,7 +72,7 @@ function SettingsPage() {
         setBusinessLocation(p.business_location || '')
         setTonePreference(p.tone_preference || 'friendly and professional')
         setCustomInstructions(p.custom_instructions || '')
-        setAutoPublish(p.auto_publish || false)
+        setAutoPublishStars(Array.isArray(p.auto_publish_stars) ? p.auto_publish_stars : [4, 5])
         setEmailNewReview(p.email_new_review !== false)
         setEmailWeeklySummary(p.email_weekly_summary !== false)
       }
@@ -92,7 +92,7 @@ function SettingsPage() {
           business_location: businessLocation,
           tone_preference: tonePreference,
           custom_instructions: customInstructions || null,
-          auto_publish: autoPublish,
+          auto_publish_stars: autoPublishStars,
           email_new_review: emailNewReview,
           email_weekly_summary: emailWeeklySummary,
         }),
@@ -325,25 +325,42 @@ function SettingsPage() {
               />
             </div>
 
-            <div className="flex items-center justify-between rounded-lg border border-gray-200 p-4">
-              <div>
-                <p className="font-medium text-gray-900">Auto-publish replies</p>
+            <div className="rounded-lg border border-gray-200 p-4">
+              <div className="mb-3">
+                <p className="font-medium text-gray-900">Auto-publish replies for reviews rated:</p>
                 <p className="mt-0.5 text-sm text-gray-500">
-                  Post AI replies automatically without approval
+                  Checked ratings will be replied to and published automatically. Unchecked ratings will generate an AI draft for your approval before publishing.
                 </p>
               </div>
-              <button
-                onClick={() => setAutoPublish(!autoPublish)}
-                className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
-                  autoPublish ? 'bg-blue-600' : 'bg-gray-200'
-                }`}
-              >
-                <span
-                  className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                    autoPublish ? 'translate-x-5' : 'translate-x-0'
-                  }`}
-                />
-              </button>
+              <div className="flex flex-wrap gap-3">
+                {[1, 2, 3, 4, 5].map((star) => {
+                  const checked = autoPublishStars.includes(star)
+                  return (
+                    <label
+                      key={star}
+                      className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                        checked
+                          ? 'border-blue-300 bg-blue-50 text-blue-700'
+                          : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => {
+                          if (checked) {
+                            setAutoPublishStars(autoPublishStars.filter((s) => s !== star))
+                          } else {
+                            setAutoPublishStars([...autoPublishStars, star].sort())
+                          }
+                        }}
+                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      {'★'.repeat(star)} {star}-star
+                    </label>
+                  )
+                })}
+              </div>
             </div>
           </section>
 

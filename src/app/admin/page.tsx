@@ -99,6 +99,7 @@ export default function AdminPage() {
   // Customer AI modal
   const [configUser, setConfigUser] = useState<AdminUser | null>(null)
   const [customerAI, setCustomerAI] = useState<Partial<AIPromptSettings>>(emptyAISettings)
+  const [customerAutoPublishStars, setCustomerAutoPublishStars] = useState<number[]>([4, 5])
   const [savingCustomerAI, setSavingCustomerAI] = useState(false)
   const [previewingCustomer, setPreviewingCustomer] = useState(false)
   const [customerPreview, setCustomerPreview] = useState<{ oneStarReply: string; fiveStarReply: string } | null>(null)
@@ -182,18 +183,25 @@ export default function AdminPage() {
 
   // ── Customer AI handlers ─────────────────────────
   const handleOpenCustomerConfig = async (user: AdminUser) => {
-    setConfigUser(user); setCustomerAI(emptyAISettings); setCustomerPreview(null)
+    setConfigUser(user); setCustomerAI(emptyAISettings); setCustomerPreview(null); setCustomerAutoPublishStars([4, 5])
+    // Fetch AI settings
     const res = await fetch(`/api/admin/ai-prompts?user_id=${user.id}`)
     if (res.ok) { const data = await res.json(); if (data.customer) setCustomerAI({ ...emptyAISettings, ...data.customer }) }
+    // Fetch user's auto_publish_stars
+    const settingsRes = await fetch(`/api/settings?impersonate=${user.id}`)
+    if (settingsRes.ok) { const data = await settingsRes.json(); if (data.profile?.auto_publish_stars) setCustomerAutoPublishStars(data.profile.auto_publish_stars) }
   }
 
   const handleSaveCustomerAI = async () => {
     if (!configUser) return
     setSavingCustomerAI(true)
     try {
+      // Save AI prompt settings
       const res = await fetch('/api/admin/ai-prompts', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: configUser.id, ...customerAI }) })
-      if (res.ok) toast.success(`AI settings saved for ${configUser.email}`)
-      else toast.error('Failed to save AI settings')
+      // Also save auto_publish_stars via the admin impersonate settings endpoint
+      const starsRes = await fetch(`/api/admin/users/${configUser.id}/auto-publish-stars`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ auto_publish_stars: customerAutoPublishStars }) })
+      if (res.ok && starsRes.ok) toast.success(`AI settings saved for ${configUser.email}`)
+      else toast.error('Failed to save some AI settings')
     } catch { toast.error('Failed to save AI settings') }
     setSavingCustomerAI(false)
   }
@@ -491,6 +499,22 @@ export default function AdminPage() {
               </Section>
 
               {/* Sign-off */}
+              {/* Auto-publish Stars */}
+              <Section title="Auto-Publish by Star Rating" description="Which star ratings should be auto-published vs held for approval.">
+                <div className="flex flex-wrap gap-3">
+                  {[1, 2, 3, 4, 5].map((star) => {
+                    const checked = customerAutoPublishStars.includes(star)
+                    return (
+                      <label key={star} className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${checked ? 'border-blue-300 bg-blue-50 text-blue-700' : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'}`}>
+                        <input type="checkbox" checked={checked} onChange={() => { if (checked) { setCustomerAutoPublishStars(customerAutoPublishStars.filter((s) => s !== star)) } else { setCustomerAutoPublishStars([...customerAutoPublishStars, star].sort()) } }} className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                        {'★'.repeat(star)} {star}-star
+                      </label>
+                    )
+                  })}
+                </div>
+                <p className="mt-2 text-xs text-gray-400">Checked = auto-publish. Unchecked = draft for manual approval.</p>
+              </Section>
+
               <Section title="Sign-off Style" description="How to end replies. Leave blank for no specific sign-off.">
                 <input type="text" value={customerAI.sign_off || ''} onChange={(e) => setCustomerAI({ ...customerAI, sign_off: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder='e.g. "The team at Camden Car Wash" or "Thanks, Jordan @ V8 Auto"' />
               </Section>

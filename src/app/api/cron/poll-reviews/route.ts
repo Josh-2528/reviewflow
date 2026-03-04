@@ -137,8 +137,13 @@ export async function GET(request: NextRequest) {
             details: `AI reply generated for ${parsed.reviewer_name}'s review`,
           })
 
-          // Auto-publish if enabled and user has access
-          if (user.auto_publish && canAutoPublish(user)) {
+          // Smart auto-publish: check if this star rating is in the auto-publish list
+          const autoPublishStars: number[] = Array.isArray(user.auto_publish_stars)
+            ? user.auto_publish_stars
+            : [4, 5]
+          const shouldAutoPublish = canAutoPublish(user) && autoPublishStars.includes(parsed.star_rating)
+
+          if (shouldAutoPublish) {
             try {
               await postReply(
                 user.id,
@@ -152,6 +157,7 @@ export async function GET(request: NextRequest) {
                 .from('replies')
                 .update({
                   status: 'published',
+                  auto_published: true,
                   published_at: new Date().toISOString(),
                 })
                 .eq('review_id', savedReview.id)
