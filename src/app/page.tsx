@@ -223,15 +223,13 @@ export default function LandingPage() {
           </div>
 
           <div className="mt-10 text-center">
-            <a
-              href="https://calendly.com"
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              href="/signup"
               className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-7 py-3.5 text-base font-semibold text-white shadow-lg shadow-emerald-500/20 transition-all hover:bg-emerald-600"
             >
-              Get Both — Book a Call
+              Start Free Trial
               <ArrowRight size={18} />
-            </a>
+            </Link>
           </div>
         </div>
       </section>
@@ -450,7 +448,7 @@ export default function LandingPage() {
                 Custom pricing, dedicated onboarding, and volume discounts for larger operations.
               </p>
               <a
-                href="mailto:admin@carwashai.com.au"
+                href="mailto:admin@carwashai.com.au?subject=ReviewFlow%20Enterprise%20Inquiry"
                 className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white py-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50"
               >
                 Contact Us

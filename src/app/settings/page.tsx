@@ -20,8 +20,11 @@ import {
   CreditCard,
   ExternalLink,
   Mail,
+  AlertTriangle,
 } from 'lucide-react'
 import type { User } from '@/lib/types'
+
+type PlanStatus = 'trial' | 'pro' | 'expired'
 
 const toneOptions = [
   { value: 'friendly and professional', label: 'Friendly & Professional' },
@@ -40,6 +43,8 @@ export default function SettingsPageWrapper() {
 
 function SettingsPage() {
   const [profile, setProfile] = useState<User | null>(null)
+  const [planStatus, setPlanStatus] = useState<PlanStatus>('trial')
+  const [trialDaysRemaining, setTrialDaysRemaining] = useState(14)
   const [businessName, setBusinessName] = useState('')
   const [businessLocation, setBusinessLocation] = useState('')
   const [tonePreference, setTonePreference] = useState('')
@@ -61,6 +66,8 @@ function SettingsPage() {
         const data = await res.json()
         const p = data.profile
         setProfile(p)
+        setPlanStatus(data.planStatus || 'trial')
+        setTrialDaysRemaining(data.trialDaysRemaining ?? 14)
         setBusinessName(p.business_name || '')
         setBusinessLocation(p.business_location || '')
         setTonePreference(p.tone_preference || 'friendly and professional')
@@ -153,6 +160,24 @@ function SettingsPage() {
     router.push('/')
   }
 
+  const handleSubscribe = async () => {
+    try {
+      const res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      })
+      const data = await res.json()
+      if (res.ok && data.url) {
+        window.location.href = data.url
+      } else {
+        toast.error(data.error || 'Failed to start checkout')
+      }
+    } catch {
+      toast.error('Something went wrong')
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -160,6 +185,13 @@ function SettingsPage() {
       </div>
     )
   }
+
+  const planLabel =
+    planStatus === 'pro'
+      ? 'ReviewFlow Pro'
+      : planStatus === 'trial'
+      ? `Free Trial (${trialDaysRemaining} day${trialDaysRemaining !== 1 ? 's' : ''} remaining)`
+      : 'Trial Expired'
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -299,25 +331,11 @@ function SettingsPage() {
                 <p className="mt-0.5 text-sm text-gray-500">
                   Post AI replies automatically without approval
                 </p>
-                {profile?.plan_id !== 'pro' && (
-                  <p className="mt-1 text-xs text-amber-600">
-                    Requires Pro plan.{' '}
-                    <a href="/pricing" className="underline">
-                      Upgrade
-                    </a>
-                  </p>
-                )}
               </div>
               <button
-                onClick={() => {
-                  if (profile?.plan_id !== 'pro') {
-                    toast.error('Auto-publish requires the Pro plan')
-                    return
-                  }
-                  setAutoPublish(!autoPublish)
-                }}
+                onClick={() => setAutoPublish(!autoPublish)}
                 className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
-                  autoPublish && profile?.plan_id === 'pro' ? 'bg-blue-600' : 'bg-gray-200'
+                  autoPublish ? 'bg-blue-600' : 'bg-gray-200'
                 }`}
               >
                 <span
@@ -375,11 +393,9 @@ function SettingsPage() {
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-500">Current Plan</p>
-                <p className="text-lg font-semibold text-gray-900 capitalize">
-                  {profile?.plan_id || 'Free'}
-                </p>
+                <p className="text-lg font-semibold text-gray-900">{planLabel}</p>
               </div>
-              {profile?.subscription_status && (
+              {planStatus === 'pro' && profile?.subscription_status && (
                 <span
                   className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
                     profile.subscription_status === 'active'
@@ -392,9 +408,15 @@ function SettingsPage() {
                   {profile.subscription_status}
                 </span>
               )}
+              {planStatus === 'expired' && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700">
+                  <AlertTriangle size={12} />
+                  Expired
+                </span>
+              )}
             </div>
 
-            {profile?.subscription_current_period_end && (
+            {profile?.subscription_current_period_end && planStatus === 'pro' && (
               <p className="mb-4 text-sm text-gray-500">
                 Current period ends:{' '}
                 {new Date(profile.subscription_current_period_end).toLocaleDateString()}
@@ -402,14 +424,14 @@ function SettingsPage() {
             )}
 
             <div className="flex gap-3">
-              {(!profile?.plan_id || profile.plan_id === 'free') && (
-                <a
-                  href="/pricing"
-                  className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              {planStatus !== 'pro' && (
+                <button
+                  onClick={handleSubscribe}
+                  className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
                 >
                   <CreditCard size={14} />
-                  Upgrade Plan
-                </a>
+                  Subscribe Now — $88/mo
+                </button>
               )}
               {profile?.stripe_customer_id && (
                 <button
@@ -417,7 +439,7 @@ function SettingsPage() {
                   className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
                 >
                   <ExternalLink size={14} />
-                  Manage Billing
+                  Manage Subscription
                 </button>
               )}
             </div>

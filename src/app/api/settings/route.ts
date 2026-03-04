@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { resolveUserId } from '@/lib/admin'
+import { getUserPlanStatus, getTrialDaysRemaining, type PlanStatus } from '@/lib/stripe'
 
 export async function PUT(request: NextRequest) {
   try {
@@ -96,7 +97,15 @@ export async function GET(request: NextRequest) {
     // Strip sensitive fields
     const { google_access_token, google_refresh_token, ...safeProfile } = profile
 
-    return NextResponse.json({ profile: safeProfile })
+    // Calculate plan status and trial days remaining
+    const planStatus: PlanStatus = getUserPlanStatus(profile)
+    const trialDaysRemaining = getTrialDaysRemaining(profile.trial_started_at)
+
+    return NextResponse.json({
+      profile: safeProfile,
+      planStatus,
+      trialDaysRemaining,
+    })
   } catch (error) {
     console.error('Get settings error:', error)
     return NextResponse.json(

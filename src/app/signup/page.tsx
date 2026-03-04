@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { AppLogo } from '@/components/app-logo'
+import { CheckCircle2 } from 'lucide-react'
 
 export default function SignupPage() {
   const [email, setEmail] = useState('')
@@ -43,7 +44,8 @@ export default function SignupPage() {
           <Link href="/" className="inline-flex items-center gap-2">
             <AppLogo size="large" />
           </Link>
-          <p className="mt-2 text-sm text-gray-600">Create your account</p>
+          <h1 className="mt-4 text-xl font-bold text-gray-900">Start Your 14-Day Free Trial</h1>
+          <p className="mt-1 text-sm text-gray-600">No credit card required. Full access to everything.</p>
         </div>
 
         <form
@@ -88,13 +90,28 @@ export default function SignupPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-blue-600 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            className="w-full rounded-lg bg-emerald-600 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
           >
-            {loading ? 'Creating account...' : 'Create Account'}
+            {loading ? 'Creating account...' : 'Start Free Trial'}
           </button>
         </form>
 
-        <p className="mt-4 text-center text-sm text-gray-600">
+        {/* Trial features */}
+        <div className="mt-6 space-y-2">
+          {[
+            'Unlimited reviews & AI replies',
+            'Auto-polling every 15 min',
+            'Auto-publish to Google',
+            'Full dashboard access',
+          ].map((f) => (
+            <div key={f} className="flex items-center gap-2 text-sm text-gray-600">
+              <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
+              {f}
+            </div>
+          ))}
+        </div>
+
+        <p className="mt-6 text-center text-sm text-gray-600">
           Already have an account?{' '}
           <Link href="/login" className="font-medium text-blue-600 hover:text-blue-700">
             Log in

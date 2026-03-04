@@ -20,101 +20,134 @@ export const stripe = new Proxy({} as Stripe, {
 
 // ── Plan definitions ─────────────────────────────────────────────────
 
-export type PlanId = 'free' | 'pro'
+export type PlanStatus = 'trial' | 'pro' | 'expired'
+
+export const TRIAL_DURATION_DAYS = 14
 
 export interface PlanDefinition {
-  id: PlanId
   name: string
-  price: number // monthly in dollars, 0 for free
-  stripePriceId: string | null // null for free tier
-  reviewLimit: number | null // null = unlimited
+  price: number
+  stripePriceId: string
   features: string[]
-  aiReplies: boolean
-  autoPolling: boolean
-  autoPublish: boolean
-  prioritySupport: boolean
 }
 
-export const PLANS: Record<PlanId, PlanDefinition> = {
-  free: {
-    id: 'free',
-    name: 'Free Trial',
-    price: 0,
-    stripePriceId: null,
-    reviewLimit: 10,
-    features: [
-      'Up to 10 reviews/month',
-      'Manual review polling',
-      'Manual reply writing',
-      'Basic dashboard',
-    ],
-    aiReplies: false,
-    autoPolling: false,
-    autoPublish: false,
-    prioritySupport: false,
-  },
-  pro: {
-    id: 'pro',
-    name: 'ReviewFlow Pro',
-    price: 88,
-    stripePriceId: process.env.STRIPE_PRO_PRICE_ID || '',
-    reviewLimit: null,
-    features: [
-      'Unlimited reviews',
-      'AI-generated replies',
-      'Auto-polling every 15 min',
-      'Custom tone & voice',
-      'Email notifications',
-      'Auto-publish replies',
-      'Weekly summary emails',
-      'Priority support',
-      'Up to 3 Google Business locations',
-    ],
-    aiReplies: true,
-    autoPolling: true,
-    autoPublish: true,
-    prioritySupport: true,
-  },
+export const PRO_PLAN: PlanDefinition = {
+  name: 'ReviewFlow Pro',
+  price: 88,
+  stripePriceId: process.env.STRIPE_PRO_PRICE_ID || '',
+  features: [
+    'Unlimited reviews',
+    'AI-generated replies',
+    'Auto-polling every 15 min',
+    'Custom tone & voice',
+    'Email notifications',
+    'Auto-publish replies',
+    'Weekly summary emails',
+    'Priority support',
+    'Up to 3 Google Business locations',
+  ],
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────
+// ── Trial helpers ────────────────────────────────────────────────────
 
-export function getPlanById(planId: string | null): PlanDefinition {
-  if (planId && planId in PLANS) {
-    return PLANS[planId as PlanId]
+/**
+ * Calculate the user's current plan status based on their subscription and trial.
+ */
+export function getUserPlanStatus(user: {
+  plan_id: string | null
+  subscription_status: string | null
+  trial_started_at: string | null
+}): PlanStatus {
+  // If they have an active subscription, they're pro
+  if (
+    user.plan_id === 'pro' &&
+    (user.subscription_status === 'active' || user.subscription_status === 'trialing')
+  ) {
+    return 'pro'
   }
-  return PLANS.free
-}
 
-export function getPlanByPriceId(priceId: string): PlanDefinition | null {
-  for (const plan of Object.values(PLANS)) {
-    if (plan.stripePriceId && plan.stripePriceId === priceId) {
-      return plan
+  // If they have a trial start date, check if it's still within 14 days
+  if (user.trial_started_at) {
+    const trialStart = new Date(user.trial_started_at)
+    const now = new Date()
+    const daysSinceStart = (now.getTime() - trialStart.getTime()) / (1000 * 60 * 60 * 24)
+
+    if (daysSinceStart <= TRIAL_DURATION_DAYS) {
+      return 'trial'
     }
   }
-  return null
+
+  // No active sub and trial expired (or never started)
+  return 'expired'
 }
 
 /**
- * Check if a user has reached their review limit for the current month.
- * Returns true if they can still receive reviews.
+ * Get the number of trial days remaining. Returns 0 if expired.
  */
-export async function canReceiveReviews(
-  userId: string,
-  supabase: { from: (table: string) => unknown },
-  plan: PlanDefinition
-): Promise<boolean> {
-  if (plan.reviewLimit === null) return true
+export function getTrialDaysRemaining(trialStartedAt: string | null): number {
+  if (!trialStartedAt) return 0
 
+  const trialStart = new Date(trialStartedAt)
   const now = new Date()
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+  const daysSinceStart = (now.getTime() - trialStart.getTime()) / (1000 * 60 * 60 * 24)
+  const remaining = Math.ceil(TRIAL_DURATION_DAYS - daysSinceStart)
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { count } = await (supabase as any)
-    .from('reviews')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', userId)
-    .gte('created_at', startOfMonth)
+  return Math.max(0, remaining)
+}
 
-  return (count || 0) < plan.reviewLimit
+/**
+ * Check if a user has full access (trial or pro).
+ * Users with expired trials or no subscription get read-only.
+ */
+export function hasFullAccess(user: {
+  plan_id: string | null
+  subscription_status: string | null
+  trial_started_at: string | null
+}): boolean {
+  const status = getUserPlanStatus(user)
+  return status === 'trial' || status === 'pro'
+}
+
+/**
+ * Check if auto-polling should be enabled for this user.
+ * Only active trial and pro users get auto-polling.
+ */
+export function canAutoPoll(user: {
+  plan_id: string | null
+  subscription_status: string | null
+  trial_started_at: string | null
+}): boolean {
+  return hasFullAccess(user)
+}
+
+/**
+ * Check if AI replies should be generated for this user.
+ */
+export function canGenerateAIReplies(user: {
+  plan_id: string | null
+  subscription_status: string | null
+  trial_started_at: string | null
+}): boolean {
+  return hasFullAccess(user)
+}
+
+/**
+ * Check if auto-publish is available for this user.
+ */
+export function canAutoPublish(user: {
+  plan_id: string | null
+  subscription_status: string | null
+  trial_started_at: string | null
+}): boolean {
+  return hasFullAccess(user)
+}
+
+/**
+ * Get plan by price ID (for webhook handling).
+ */
+export function getPlanByPriceId(priceId: string): { id: string; name: string } | null {
+  if (PRO_PLAN.stripePriceId && PRO_PLAN.stripePriceId === priceId) {
+    return { id: 'pro', name: PRO_PLAN.name }
+  }
+  return null
 }

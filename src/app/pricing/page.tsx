@@ -23,7 +23,7 @@ export default function PricingPage() {
       const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan_id: 'pro' }),
+        body: JSON.stringify({}),
       })
 
       const data = await res.json()
@@ -129,7 +129,7 @@ export default function PricingPage() {
               disabled={loading}
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 py-3 text-sm font-semibold text-white transition-colors hover:bg-emerald-600 disabled:opacity-50"
             >
-              {loading ? 'Loading...' : 'Start 14-Day Free Trial'}
+              {loading ? 'Loading...' : 'Subscribe Now — $88/mo'}
               <ArrowRight size={16} />
             </button>
           </div>
@@ -167,7 +167,7 @@ export default function PricingPage() {
             </div>
 
             <a
-              href="mailto:admin@carwashai.com.au"
+              href="mailto:admin@carwashai.com.au?subject=ReviewFlow%20Enterprise%20Inquiry"
               className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white py-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50"
             >
               <Mail size={16} />
@@ -187,11 +187,11 @@ export default function PricingPage() {
           <div className="space-y-6">
             <FaqItem
               q="What happens after the 14-day trial?"
-              a="After your free trial, you'll be charged $88/month. You can cancel anytime during the trial and won't be charged."
+              a="If you don't subscribe, your dashboard becomes read-only. You can still see your old reviews and replies, but AI generation, polling, and publishing are disabled. Subscribe anytime to restore full access."
             />
             <FaqItem
               q="Can I cancel anytime?"
-              a="Yes. No contracts. Cancel anytime from your Settings page or billing portal. Changes take effect immediately."
+              a="Yes. No contracts. Cancel anytime from your Settings page or billing portal."
             />
             <FaqItem
               q="What does auto-publish do?"

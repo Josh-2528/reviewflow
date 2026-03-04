@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { postReply } from '@/lib/google'
+import { hasFullAccess } from '@/lib/stripe'
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,6 +35,14 @@ export async function POST(request: NextRequest) {
 
     if (!profile) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    // Check if user has access
+    if (!hasFullAccess(profile)) {
+      return NextResponse.json(
+        { error: 'Your trial has ended. Subscribe to continue managing your reviews.' },
+        { status: 403 }
+      )
     }
 
     // Get review and reply

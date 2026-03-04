@@ -6,20 +6,10 @@ import { Check, ChevronRight } from 'lucide-react'
 import { AppLogo } from '@/components/app-logo'
 import { toast } from 'sonner'
 
-const toneOptions = [
-  { value: 'friendly and professional', label: 'Friendly & Professional' },
-  { value: 'casual and warm', label: 'Casual & Warm' },
-  { value: 'formal and corporate', label: 'Formal & Corporate' },
-  { value: 'short and direct', label: 'Short & Direct' },
-]
-
 export default function OnboardingClient() {
   const [step, setStep] = useState(1)
   const [businessName, setBusinessName] = useState('')
   const [businessLocation, setBusinessLocation] = useState('')
-  const [tonePreference, setTonePreference] = useState('friendly and professional')
-  const [customInstructions, setCustomInstructions] = useState('')
-  const [autoPublish, setAutoPublish] = useState(false)
   const [googleConnected, setGoogleConnected] = useState(false)
   const [saving, setSaving] = useState(false)
 
@@ -29,7 +19,7 @@ export default function OnboardingClient() {
   useEffect(() => {
     if (searchParams.get('google') === 'connected') {
       setGoogleConnected(true)
-      setStep(4)
+      setStep(2)
       toast.success('Google Business Profile connected!')
     }
     if (searchParams.get('error')) {
@@ -64,20 +54,6 @@ export default function OnboardingClient() {
     setSaving(false)
   }
 
-  const handleStep2 = async () => {
-    setSaving(true)
-    try {
-      await saveSettings({
-        tone_preference: tonePreference,
-        custom_instructions: customInstructions || null,
-      })
-      setStep(3)
-    } catch {
-      toast.error('Failed to save. Please try again.')
-    }
-    setSaving(false)
-  }
-
   const handleConnectGoogle = async () => {
     try {
       const res = await fetch('/api/auth/google', { method: 'POST' })
@@ -92,11 +68,10 @@ export default function OnboardingClient() {
     }
   }
 
-  const handleStep4 = async () => {
+  const handleFinish = async () => {
     setSaving(true)
     try {
       await saveSettings({
-        auto_publish: autoPublish,
         onboarding_completed: true,
       })
       router.push('/dashboard')
@@ -118,7 +93,7 @@ export default function OnboardingClient() {
 
         {/* Progress */}
         <div className="mb-8 flex items-center justify-center gap-2">
-          {[1, 2, 3, 4].map((s) => (
+          {[1, 2].map((s) => (
             <div key={s} className="flex items-center gap-2">
               <div
                 className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
@@ -131,7 +106,7 @@ export default function OnboardingClient() {
               >
                 {s < step ? <Check size={16} /> : s}
               </div>
-              {s < 4 && (
+              {s < 2 && (
                 <div
                   className={`h-0.5 w-8 ${
                     s < step ? 'bg-green-500' : 'bg-gray-200'
@@ -190,59 +165,8 @@ export default function OnboardingClient() {
             </>
           )}
 
-          {/* Step 2: Tone */}
+          {/* Step 2: Connect Google */}
           {step === 2 && (
-            <>
-              <h2 className="mb-1 text-lg font-semibold text-gray-900">
-                Reply Tone
-              </h2>
-              <p className="mb-6 text-sm text-gray-500">
-                Choose how your replies should sound.
-              </p>
-
-              <div className="mb-4">
-                <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                  Tone Preference
-                </label>
-                <select
-                  value={tonePreference}
-                  onChange={(e) => setTonePreference(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                >
-                  {toneOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="mb-6">
-                <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                  Custom Instructions (optional)
-                </label>
-                <textarea
-                  value={customInstructions}
-                  onChange={(e) => setCustomInstructions(e.target.value)}
-                  rows={3}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  placeholder='e.g. "Always mention our loyalty program" or "Invite unhappy customers to call us on 0400 123 456"'
-                />
-              </div>
-
-              <button
-                onClick={handleStep2}
-                disabled={saving}
-                className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-              >
-                {saving ? 'Saving...' : 'Continue'}
-                <ChevronRight size={16} />
-              </button>
-            </>
-          )}
-
-          {/* Step 3: Connect Google */}
-          {step === 3 && (
             <>
               <h2 className="mb-1 text-lg font-semibold text-gray-900">
                 Connect Google Business Profile
@@ -287,60 +211,20 @@ export default function OnboardingClient() {
               )}
 
               <button
-                onClick={() => setStep(4)}
-                className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
+                onClick={handleFinish}
+                disabled={saving}
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
               >
-                {googleConnected ? 'Continue' : 'Skip for now'}
+                {saving ? 'Finishing setup...' : googleConnected ? 'Go to Dashboard' : 'Skip for now'}
                 <ChevronRight size={16} />
               </button>
             </>
           )}
-
-          {/* Step 4: Auto-publish */}
-          {step === 4 && (
-            <>
-              <h2 className="mb-1 text-lg font-semibold text-gray-900">
-                Auto-Publish Replies
-              </h2>
-              <p className="mb-6 text-sm text-gray-500">
-                Should we publish AI replies automatically, or do you prefer to review
-                each one first?
-              </p>
-
-              <div className="mb-6 rounded-lg border border-gray-200 p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-gray-900">Auto-publish replies</p>
-                    <p className="mt-1 text-sm text-gray-500">
-                      When enabled, AI replies are posted to Google automatically
-                      without waiting for your approval.
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setAutoPublish(!autoPublish)}
-                    className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
-                      autoPublish ? 'bg-blue-600' : 'bg-gray-200'
-                    }`}
-                  >
-                    <span
-                      className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                        autoPublish ? 'translate-x-5' : 'translate-x-0'
-                      }`}
-                    />
-                  </button>
-                </div>
-              </div>
-
-              <button
-                onClick={handleStep4}
-                disabled={saving}
-                className="w-full rounded-lg bg-blue-600 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-              >
-                {saving ? 'Finishing setup...' : 'Go to Dashboard'}
-              </button>
-            </>
-          )}
         </div>
+
+        <p className="mt-4 text-center text-xs text-gray-400">
+          Your 14-day free trial has started. You&apos;ll have full access to all features.
+        </p>
       </div>
     </div>
   )

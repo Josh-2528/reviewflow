@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { PLANS } from '@/lib/stripe'
+import { PRO_PLAN } from '@/lib/stripe'
 
 // Helper: verify the logged-in user is the admin
 async function verifyAdmin() {
@@ -63,15 +63,14 @@ export async function GET() {
     const totalUsers = users.length
     const totalReviews = Object.values(countMap).reduce((sum, c) => sum + c, 0)
 
-    // MRR calculation
+    // MRR calculation — only count active/trialing pro subscribers
     let mrr = 0
     for (const u of users) {
-      const planId = u.plan_id || 'free'
       if (
-        planId in PLANS &&
+        u.plan_id === 'pro' &&
         (u.subscription_status === 'active' || u.subscription_status === 'trialing')
       ) {
-        mrr += PLANS[planId as keyof typeof PLANS].price
+        mrr += PRO_PLAN.price
       }
     }
 

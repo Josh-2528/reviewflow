@@ -6,7 +6,6 @@ import Stripe from 'stripe'
 export const runtime = 'nodejs'
 
 // Helper to safely extract current_period_end from a subscription object
-// Stripe SDK v20+ changed the shape; we handle both old and new formats
 function getSubscriptionPeriodEnd(sub: Record<string, unknown>): string | null {
   const periodEnd =
     (sub as Record<string, unknown>).current_period_end ??
@@ -47,9 +46,8 @@ export async function POST(request: NextRequest) {
         const session = event.data.object as Stripe.Checkout.Session
 
         const userId = session.metadata?.supabase_user_id
-        const planId = session.metadata?.plan_id
 
-        if (!userId || !planId) {
+        if (!userId) {
           console.error('Webhook: Missing metadata on checkout session')
           break
         }
@@ -66,20 +64,19 @@ export async function POST(request: NextRequest) {
             .update({
               stripe_customer_id: session.customer as string,
               stripe_subscription_id: sub.id,
-              plan_id: planId,
+              plan_id: 'pro',
               subscription_status: sub.status,
               subscription_current_period_end: getSubscriptionPeriodEnd(sub),
             })
             .eq('id', userId)
 
-          console.log(`Webhook: User ${userId} subscribed to ${planId}`)
+          console.log(`Webhook: User ${userId} subscribed to pro`)
         }
         break
       }
 
-      // ── Subscription updated (upgrade/downgrade/renewal) ───────
+      // ── Subscription updated (renewal) ─────────────────────────
       case 'customer.subscription.updated': {
-        // Event data comes directly from Stripe — use raw object
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const subscription = event.data.object as any
 
@@ -125,7 +122,7 @@ export async function POST(request: NextRequest) {
             })
             .eq('id', user.id)
 
-          console.log(`Webhook: User ${user.id} subscription cancelled → free plan`)
+          console.log(`Webhook: User ${user.id} subscription cancelled`)
         }
         break
       }
@@ -173,9 +170,9 @@ async function updateSubscription(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   subscription: any
 ) {
-  const priceId = subscription.items?.data?.[0]?.price?.id
-  let planId = subscription.metadata?.plan_id || 'pro'
+  let planId = 'pro'
 
+  const priceId = subscription.items?.data?.[0]?.price?.id
   if (priceId) {
     const matchedPlan = getPlanByPriceId(priceId)
     if (matchedPlan) {

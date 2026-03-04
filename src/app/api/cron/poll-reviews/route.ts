@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { fetchReviews, parseGoogleReview, postReply } from '@/lib/google'
 import { generateReviewReply } from '@/lib/claude'
-import { getPlanById, canReceiveReviews } from '@/lib/stripe'
+import { canAutoPoll, canGenerateAIReplies, canAutoPublish } from '@/lib/stripe'
 import { sendNewReviewEmail } from '@/lib/email'
 
 // Cron job to poll reviews for all connected users
@@ -34,9 +34,8 @@ export async function GET(request: NextRequest) {
   for (const user of users) {
     const userResult = { userId: user.id, newReviews: 0, errors: [] as string[] }
 
-    // Only auto-poll for users on Pro or Business plans
-    const plan = getPlanById(user.plan_id)
-    if (!plan.autoPolling) {
+    // Only auto-poll for users with active trial or pro subscription
+    if (!canAutoPoll(user)) {
       continue
     }
 
@@ -103,8 +102,8 @@ export async function GET(request: NextRequest) {
 
         if (parsed.has_existing_reply) continue
 
-        // Gate: AI replies require Pro or Business
-        if (!plan.aiReplies) continue
+        // AI replies require active trial or pro
+        if (!canGenerateAIReplies(user)) continue
 
         // Generate AI reply
         try {
@@ -136,8 +135,8 @@ export async function GET(request: NextRequest) {
             details: `AI reply generated for ${parsed.reviewer_name}'s review`,
           })
 
-          // Auto-publish if enabled AND plan allows it
-          if (user.auto_publish && plan.autoPublish) {
+          // Auto-publish if enabled and user has access
+          if (user.auto_publish && canAutoPublish(user)) {
             try {
               await postReply(
                 user.id,

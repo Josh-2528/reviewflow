@@ -19,6 +19,7 @@ export interface User {
   subscription_current_period_end: string | null
   email_new_review: boolean
   email_weekly_summary: boolean
+  trial_started_at: string | null
   created_at: string
   updated_at: string
 }

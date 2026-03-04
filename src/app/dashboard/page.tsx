@@ -20,6 +20,8 @@ import {
   Check,
   X,
   Pencil,
+  Lock,
+  AlertTriangle,
 } from 'lucide-react'
 import { StarRating } from '@/components/star-rating'
 import { StatusBadge } from '@/components/status-badge'
@@ -30,6 +32,7 @@ import { GettingStartedChecklist } from '@/components/getting-started-checklist'
 import { Suspense } from 'react'
 import type { Review, DashboardStats } from '@/lib/types'
 
+type PlanStatus = 'trial' | 'pro' | 'expired'
 type FilterTab = 'all' | 'needs_reply' | 'published' | 'skipped'
 
 export default function DashboardPageWrapper() {
@@ -47,7 +50,9 @@ function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [editingReview, setEditingReview] = useState<Review | null>(null)
-  const [planId, setPlanId] = useState<string>('free')
+  const [planStatus, setPlanStatus] = useState<PlanStatus>('trial')
+  const [trialDaysRemaining, setTrialDaysRemaining] = useState(14)
+  const [isDemo, setIsDemo] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
   const impersonateId = searchParams.get('impersonate')
@@ -76,7 +81,12 @@ function DashboardPage() {
     const res = await fetch(`/api/settings${qsFirst}`)
     if (res.ok) {
       const data = await res.json()
-      setPlanId(data.profile?.plan_id || 'free')
+      setPlanStatus(data.planStatus || 'trial')
+      setTrialDaysRemaining(data.trialDaysRemaining ?? 14)
+      // Check if this is the demo account
+      if (data.profile?.email === 'demo@reviewflow.app') {
+        setIsDemo(true)
+      }
     }
   }
 
@@ -90,6 +100,14 @@ function DashboardPage() {
   }, [fetchReviews])
 
   const handleRefresh = async () => {
+    if (isDemo) {
+      toast.error('Sign up to use this feature with your real reviews')
+      return
+    }
+    if (planStatus === 'expired') {
+      toast.error('Your trial has ended. Subscribe to continue managing your reviews.')
+      return
+    }
     setRefreshing(true)
     try {
       const res = await fetch('/api/reviews/refresh', { method: 'POST' })
@@ -107,6 +125,14 @@ function DashboardPage() {
   }
 
   const handleApprove = async (reviewId: string) => {
+    if (isDemo) {
+      toast.error('Sign up to use this feature with your real reviews')
+      return
+    }
+    if (planStatus === 'expired') {
+      toast.error('Your trial has ended. Subscribe to continue managing your reviews.')
+      return
+    }
     try {
       const res = await fetch('/api/replies/approve', {
         method: 'POST',
@@ -126,6 +152,14 @@ function DashboardPage() {
   }
 
   const handleEdit = async (reviewId: string, editedText: string) => {
+    if (isDemo) {
+      toast.error('Sign up to use this feature with your real reviews')
+      return
+    }
+    if (planStatus === 'expired') {
+      toast.error('Your trial has ended. Subscribe to continue managing your reviews.')
+      return
+    }
     const res = await fetch('/api/replies/edit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -142,6 +176,14 @@ function DashboardPage() {
   }
 
   const handleSkip = async (reviewId: string) => {
+    if (isDemo) {
+      toast.error('Sign up to use this feature with your real reviews')
+      return
+    }
+    if (planStatus === 'expired') {
+      toast.error('Your trial has ended. Subscribe to continue managing your reviews.')
+      return
+    }
     try {
       const res = await fetch('/api/replies/skip', {
         method: 'POST',
@@ -240,13 +282,73 @@ function DashboardPage() {
       {/* Main Content */}
       <main className="lg:ml-56">
         <ImpersonationBanner />
+
+        {/* Demo Banner */}
+        {isDemo && (
+          <div className="border-b border-amber-200 bg-amber-50 px-4 py-3">
+            <div className="mx-auto flex max-w-4xl items-center justify-between">
+              <p className="text-sm text-amber-800">
+                👀 You&apos;re viewing a demo. Start your free trial to connect your own Google reviews.
+              </p>
+              <Link
+                href="/signup"
+                className="shrink-0 rounded-lg bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
+              >
+                Start Free Trial →
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {/* Trial Banner */}
+        {!isDemo && planStatus === 'trial' && (
+          <div className="border-b border-emerald-200 bg-emerald-50 px-4 py-3">
+            <div className="mx-auto flex max-w-4xl items-center justify-between">
+              <p className="text-sm text-emerald-800">
+                🎉 You&apos;re on your 14-day free trial. <strong>{trialDaysRemaining} day{trialDaysRemaining !== 1 ? 's' : ''} remaining.</strong>
+              </p>
+              <Link
+                href="/pricing"
+                className="shrink-0 rounded-lg bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
+              >
+                Subscribe Now
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {/* Expired Trial Wall */}
+        {!isDemo && planStatus === 'expired' && (
+          <div className="border-b border-red-200 bg-red-50 px-4 py-4">
+            <div className="mx-auto flex max-w-4xl items-center justify-between">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="h-5 w-5 text-red-600" />
+                <div>
+                  <p className="text-sm font-medium text-red-800">
+                    Your trial has ended.
+                  </p>
+                  <p className="text-sm text-red-700">
+                    Subscribe to continue managing your reviews. AI replies, polling, and publishing are disabled.
+                  </p>
+                </div>
+              </div>
+              <Link
+                href="/pricing"
+                className="shrink-0 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+              >
+                Subscribe Now
+              </Link>
+            </div>
+          </div>
+        )}
+
         <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
           {/* Page header */}
           <div className="mb-6 flex items-center justify-between">
             <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
             <button
               onClick={handleRefresh}
-              disabled={refreshing}
+              disabled={refreshing || planStatus === 'expired'}
               className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50"
             >
               <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
@@ -280,28 +382,8 @@ function DashboardPage() {
             </div>
           )}
 
-          {/* Getting Started Checklist */}
-          <GettingStartedChecklist impersonateQs={qsFirst} />
-
-          {/* Upgrade banner */}
-          {planId === 'free' && (
-            <div className="mb-6 flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-              <div>
-                <p className="text-sm font-medium text-emerald-800">
-                  Start your 14-day free trial
-                </p>
-                <p className="mt-0.5 text-sm text-emerald-700">
-                  Upgrade to ReviewFlow Pro for AI-generated replies, auto-polling, auto-publish, and more.
-                </p>
-              </div>
-              <Link
-                href="/pricing"
-                className="shrink-0 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
-              >
-                Upgrade
-              </Link>
-            </div>
-          )}
+          {/* Getting Started Checklist — not shown in demo */}
+          {!isDemo && <GettingStartedChecklist impersonateQs={qsFirst} />}
 
           {/* Filter Tabs */}
           <div className="mb-6 flex gap-1 rounded-lg border border-gray-200 bg-white p-1">
@@ -328,7 +410,9 @@ function DashboardPage() {
               <MessageCircle className="mx-auto mb-3 h-10 w-10 text-gray-300" />
               <p className="font-medium text-gray-900">No reviews yet</p>
               <p className="mt-1 text-sm text-gray-500">
-                Click &ldquo;Refresh Reviews&rdquo; to pull your latest Google reviews.
+                {isDemo
+                  ? 'This demo shows sample data from Sparkle & Shine Car Wash.'
+                  : 'Click "Refresh Reviews" to pull your latest Google reviews.'}
               </p>
             </div>
           ) : (
@@ -340,6 +424,8 @@ function DashboardPage() {
                   onApprove={handleApprove}
                   onEdit={() => setEditingReview(review)}
                   onSkip={handleSkip}
+                  isDemo={isDemo}
+                  isExpired={planStatus === 'expired'}
                 />
               ))}
             </div>
@@ -384,11 +470,15 @@ function ReviewCard({
   onApprove,
   onEdit,
   onSkip,
+  isDemo,
+  isExpired,
 }: {
   review: Review
   onApprove: (id: string) => void
   onEdit: () => void
   onSkip: (id: string) => void
+  isDemo: boolean
+  isExpired: boolean
 }) {
   const [approving, setApproving] = useState(false)
   const [skipping, setSkipping] = useState(false)
@@ -404,6 +494,8 @@ function ReviewCard({
     await onSkip(review.id)
     setSkipping(false)
   }
+
+  const actionsDisabled = isDemo || isExpired
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
@@ -456,29 +548,40 @@ function ReviewCard({
             {review.reply.final_text}
           </p>
           <div className="flex gap-2">
-            <button
-              onClick={handleApprove}
-              disabled={approving}
-              className="flex items-center gap-1.5 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
-            >
-              <Check size={14} />
-              {approving ? 'Publishing...' : 'Approve'}
-            </button>
-            <button
-              onClick={onEdit}
-              className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-            >
-              <Pencil size={14} />
-              Edit
-            </button>
-            <button
-              onClick={handleSkip}
-              disabled={skipping}
-              className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50"
-            >
-              <X size={14} />
-              Skip
-            </button>
+            {actionsDisabled ? (
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <Lock size={14} />
+                {isDemo
+                  ? 'Sign up to use this feature with your real reviews'
+                  : 'Subscribe to manage your reviews'}
+              </div>
+            ) : (
+              <>
+                <button
+                  onClick={handleApprove}
+                  disabled={approving}
+                  className="flex items-center gap-1.5 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                >
+                  <Check size={14} />
+                  {approving ? 'Publishing...' : 'Approve'}
+                </button>
+                <button
+                  onClick={onEdit}
+                  className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                >
+                  <Pencil size={14} />
+                  Edit
+                </button>
+                <button
+                  onClick={handleSkip}
+                  disabled={skipping}
+                  className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  <X size={14} />
+                  Skip
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}

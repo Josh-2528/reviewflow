@@ -4,7 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { fetchReviews, parseGoogleReview } from '@/lib/google'
 import { generateReviewReply } from '@/lib/claude'
 import { postReply } from '@/lib/google'
-import { getPlanById, canReceiveReviews } from '@/lib/stripe'
+import { hasFullAccess, canGenerateAIReplies, canAutoPublish } from '@/lib/stripe'
 import { sendNewReviewEmail } from '@/lib/email'
 
 export async function POST() {
@@ -41,9 +41,14 @@ export async function POST() {
       )
     }
 
-    // Plan-based gating
-    const plan = getPlanById(profile.plan_id)
-    const withinLimit = await canReceiveReviews(user.id, adminClient, plan)
+    // Check if user has full access (trial or pro)
+    const userHasAccess = hasFullAccess(profile)
+    if (!userHasAccess) {
+      return NextResponse.json(
+        { error: 'Your trial has ended. Subscribe to continue managing your reviews.' },
+        { status: 403 }
+      )
+    }
 
     // Fetch reviews from Google
     let googleReviews
@@ -64,6 +69,8 @@ export async function POST() {
 
     let newReviewCount = 0
     const errors: string[] = []
+    const userCanAI = canGenerateAIReplies(profile)
+    const userCanAutoPublish = canAutoPublish(profile)
 
     for (const googleReview of googleReviews) {
       const parsed = parseGoogleReview(googleReview)
@@ -76,12 +83,6 @@ export async function POST() {
         .single()
 
       if (existing) continue
-
-      // Check review limit for free plan
-      if (!withinLimit) {
-        errors.push(`Review limit reached for your plan. Upgrade to Pro for unlimited reviews.`)
-        break
-      }
 
       // Save new review
       const { data: savedReview, error: saveError } = await adminClient
@@ -125,11 +126,8 @@ export async function POST() {
       // Skip reply generation for reviews that already have replies
       if (parsed.has_existing_reply) continue
 
-      // Gate: AI replies require Pro or Business plan
-      if (!plan.aiReplies) {
-        // Free plan — leave review as "new" with no AI reply
-        continue
-      }
+      // AI replies require active trial or pro
+      if (!userCanAI) continue
 
       // Generate AI reply
       try {
@@ -164,8 +162,8 @@ export async function POST() {
           details: `AI reply generated for ${parsed.reviewer_name}'s review`,
         })
 
-        // Auto-publish if enabled AND plan allows it
-        if (profile.auto_publish && plan.autoPublish) {
+        // Auto-publish if enabled and user has access
+        if (profile.auto_publish && userCanAutoPublish) {
           try {
             await postReply(
               user.id,
@@ -196,7 +194,6 @@ export async function POST() {
             })
           } catch (publishError) {
             console.error('Auto-publish failed:', publishError)
-            // Leave as approved if publish fails
             await adminClient
               .from('replies')
               .update({ status: 'approved' })
@@ -234,7 +231,6 @@ export async function POST() {
             .eq('id', savedReview.id)
         } catch {
           errors.push(`AI failed for review ${parsed.google_review_id}`)
-          // Review stays as "new" so user can manually trigger
         }
       }
     }
