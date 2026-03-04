@@ -27,6 +27,7 @@ import {
   X,
   Loader2,
   TestTube,
+  FlaskConical,
 } from 'lucide-react'
 import type { AIPromptSettings } from '@/lib/types'
 
@@ -103,6 +104,19 @@ export default function AdminPage() {
   const [savingCustomerAI, setSavingCustomerAI] = useState(false)
   const [previewingCustomer, setPreviewingCustomer] = useState(false)
   const [customerPreview, setCustomerPreview] = useState<{ oneStarReply: string; fiveStarReply: string } | null>(null)
+
+  // Test review modal
+  const [testReviewUser, setTestReviewUser] = useState<AdminUser | null>(null)
+  const [testReviewName, setTestReviewName] = useState('Test Reviewer')
+  const [testReviewStars, setTestReviewStars] = useState(5)
+  const [testReviewText, setTestReviewText] = useState('')
+  const [submittingTestReview, setSubmittingTestReview] = useState(false)
+  const [testReviewResult, setTestReviewResult] = useState<{
+    message: string
+    status: string
+    auto_publish_triggered: boolean
+    reply_preview: string
+  } | null>(null)
 
   const router = useRouter()
 
@@ -217,6 +231,43 @@ export default function AdminPage() {
     setPreviewingCustomer(false)
   }
 
+  // ── Test Review handlers ──────────────────────────
+  const handleOpenTestReview = (user: AdminUser) => {
+    setTestReviewUser(user)
+    setTestReviewName('Test Reviewer')
+    setTestReviewStars(5)
+    setTestReviewText('')
+    setTestReviewResult(null)
+  }
+
+  const handleSubmitTestReview = async () => {
+    if (!testReviewUser) return
+    setSubmittingTestReview(true)
+    setTestReviewResult(null)
+    try {
+      const res = await fetch('/api/admin/test-review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: testReviewUser.id,
+          reviewer_name: testReviewName,
+          star_rating: testReviewStars,
+          review_text: testReviewText || null,
+        }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setTestReviewResult(data)
+        toast.success('Test review injected and processed!')
+      } else {
+        toast.error(data.error || 'Failed to create test review')
+      }
+    } catch {
+      toast.error('Failed to create test review')
+    }
+    setSubmittingTestReview(false)
+  }
+
   const handleLogout = async () => { const supabase = createClient(); await supabase.auth.signOut(); router.push('/') }
 
   const filteredUsers = users.filter(u => u.email.toLowerCase().includes(search.toLowerCase()) || (u.business_name || '').toLowerCase().includes(search.toLowerCase()))
@@ -321,6 +372,7 @@ export default function AdminPage() {
                             </div>
                           ) : (
                             <div className="flex items-center justify-end gap-1">
+                              <button onClick={() => handleOpenTestReview(user)} className="rounded-lg p-1.5 text-gray-400 hover:bg-amber-50 hover:text-amber-600" title="Test Review"><FlaskConical size={15} /></button>
                               <button onClick={() => handleOpenCustomerConfig(user)} className="rounded-lg p-1.5 text-gray-400 hover:bg-purple-50 hover:text-purple-600" title="Configure AI"><Settings size={15} /></button>
                               <Link href={`/dashboard?impersonate=${user.id}`} className="rounded-lg p-1.5 text-gray-400 hover:bg-blue-50 hover:text-blue-600" title="View as this user"><Eye size={15} /></Link>
                               <button onClick={() => setConfirmDelete(user.id)} className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600" title="Delete user"><Trash2 size={15} /></button>
@@ -559,6 +611,66 @@ export default function AdminPage() {
               <div className="flex items-center gap-3">
                 <button onClick={() => setConfigUser(null)} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</button>
                 <button onClick={handleSaveCustomerAI} disabled={savingCustomerAI} className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">{savingCustomerAI ? 'Saving...' : 'Save Settings'}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════ TEST REVIEW MODAL ═══════════════ */}
+      {testReviewUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="relative w-full max-w-lg rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b px-6 py-4">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Inject Test Review</h2>
+                <p className="text-sm text-gray-500">{testReviewUser.business_name || testReviewUser.email}</p>
+              </div>
+              <button onClick={() => setTestReviewUser(null)} className="rounded-lg p-2 text-gray-400 hover:bg-gray-100"><X size={20} /></button>
+            </div>
+
+            <div className="px-6 py-6 space-y-4">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-gray-700">Reviewer Name</label>
+                <input type="text" value={testReviewName} onChange={(e) => setTestReviewName(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="Test Reviewer" />
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-gray-700">Star Rating</label>
+                <div className="flex gap-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button key={star} onClick={() => setTestReviewStars(star)} className={`flex-1 rounded-lg border py-2 text-center text-sm font-medium transition-colors ${testReviewStars === star ? 'border-amber-400 bg-amber-50 text-amber-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>
+                      {'★'.repeat(star)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-gray-700">Review Text <span className="text-gray-400">(optional)</span></label>
+                <textarea value={testReviewText} onChange={(e) => setTestReviewText(e.target.value)} rows={3} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="Write a test review..." />
+              </div>
+
+              {testReviewResult && (
+                <div className="rounded-lg border border-green-200 bg-green-50 p-4 space-y-2">
+                  <p className="text-sm font-medium text-green-800">✓ {testReviewResult.message}</p>
+                  <p className="text-xs text-green-700">Status: {testReviewResult.status}</p>
+                  <p className="text-xs text-green-700">Auto-publish: {testReviewResult.auto_publish_triggered ? 'Yes' : 'No (held for approval)'}</p>
+                  <div className="mt-2 rounded-lg bg-white border border-green-200 p-3">
+                    <p className="text-xs font-medium uppercase tracking-wide text-blue-600 mb-1">AI Reply Preview</p>
+                    <p className="text-sm text-gray-700">{testReviewResult.reply_preview}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between border-t px-6 py-4">
+              <p className="text-xs text-gray-400">Review will be flagged as test</p>
+              <div className="flex items-center gap-3">
+                <button onClick={() => setTestReviewUser(null)} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">Close</button>
+                <button onClick={handleSubmitTestReview} disabled={submittingTestReview || !testReviewName.trim()} className="flex items-center gap-1.5 rounded-lg bg-amber-500 px-5 py-2 text-sm font-medium text-white hover:bg-amber-600 disabled:opacity-50">
+                  {submittingTestReview ? <><Loader2 size={14} className="animate-spin" />Processing...</> : <><FlaskConical size={14} />Inject Test Review</>}
+                </button>
               </div>
             </div>
           </div>

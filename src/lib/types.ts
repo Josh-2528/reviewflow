@@ -36,6 +36,7 @@ export interface Review {
   review_created_at: string
   has_existing_reply: boolean
   status: 'new' | 'reply_generated' | 'approved' | 'published' | 'skipped'
+  test_review: boolean
   created_at: string
   reply?: Reply
 }

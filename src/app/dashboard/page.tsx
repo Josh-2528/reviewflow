@@ -524,7 +524,14 @@ function ReviewCard({
               </div>
             </div>
           </div>
-          <StatusBadge status={review.status} />
+          <div className="flex items-center gap-2">
+            {review.test_review && (
+              <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+                Test
+              </span>
+            )}
+            <StatusBadge status={review.status} />
+          </div>
         </div>
 
         {review.review_text ? (
