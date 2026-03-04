@@ -71,3 +71,16 @@ export interface DashboardStats {
   reviews_awaiting_reply: number
   replies_published_this_month: number
 }
+
+export interface BrandingSettings {
+  app_name: string
+  logo_url: string | null
+  primary_color: string
+}
+
+export interface OnboardingProgress {
+  google_connected: boolean
+  has_reviewed_reply: boolean
+  has_published_reply: boolean
+  email_notifications_on: boolean
+}

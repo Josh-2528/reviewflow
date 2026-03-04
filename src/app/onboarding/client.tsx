@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { MessageSquareText, Check, ChevronRight } from 'lucide-react'
+import { Check, ChevronRight } from 'lucide-react'
+import { AppLogo } from '@/components/app-logo'
 import { toast } from 'sonner'
 
 const toneOptions = [
@@ -111,8 +112,7 @@ export default function OnboardingClient() {
         {/* Logo */}
         <div className="mb-8 text-center">
           <div className="inline-flex items-center gap-2">
-            <MessageSquareText className="h-8 w-8 text-blue-600" />
-            <span className="text-2xl font-bold text-gray-900">ReviewFlow</span>
+            <AppLogo size="large" />
           </div>
         </div>
 

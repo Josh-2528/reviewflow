@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { Suspense } from 'react'
 import { ImpersonationBanner } from '@/components/impersonation-banner'
+import { AppLogo } from '@/components/app-logo'
 import {
   MessageSquareText,
   BarChart3,
@@ -166,8 +167,7 @@ function SettingsPage() {
       <aside className="fixed left-0 top-0 z-40 hidden h-full w-56 border-r border-gray-200 bg-white lg:block">
         <div className="flex h-full flex-col">
           <div className="flex items-center gap-2 border-b px-5 py-4">
-            <MessageSquareText className="h-6 w-6 text-blue-600" />
-            <span className="text-lg font-bold text-gray-900">ReviewFlow</span>
+            <AppLogo />
           </div>
           <nav className="flex-1 space-y-1 px-3 py-4">
             <Link
@@ -208,8 +208,7 @@ function SettingsPage() {
       <header className="sticky top-0 z-30 border-b border-gray-200 bg-white lg:hidden">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
-            <MessageSquareText className="h-6 w-6 text-blue-600" />
-            <span className="font-bold text-gray-900">ReviewFlow</span>
+            <AppLogo size="small" />
           </div>
           <div className="flex items-center gap-2">
             <Link href="/dashboard" className="rounded-lg p-2 text-gray-600 hover:bg-gray-100">

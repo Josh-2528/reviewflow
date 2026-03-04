@@ -1,3 +1,5 @@
+'use client'
+
 import Link from 'next/link'
 import {
   MessageSquareText,
@@ -15,16 +17,23 @@ import {
   X,
   Mail,
 } from 'lucide-react'
+import { useBranding } from '@/components/branding-provider'
 
 export default function LandingPage() {
+  const { app_name, logo_url, primary_color } = useBranding()
+
   return (
     <div className="min-h-screen bg-white">
       {/* ─── Navbar ─────────────────────────────────────────────── */}
       <nav className="sticky top-0 z-50 border-b border-gray-100 bg-white/80 backdrop-blur-lg">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <Link href="/" className="flex items-center gap-2">
-            <MessageSquareText className="h-7 w-7 text-blue-600" />
-            <span className="text-xl font-bold text-gray-900">ReviewFlow</span>
+            {logo_url ? (
+              <img src={logo_url} alt={app_name} className="h-7 w-7 object-contain" />
+            ) : (
+              <MessageSquareText className="h-7 w-7" style={{ color: primary_color }} />
+            )}
+            <span className="text-xl font-bold text-gray-900">{app_name}</span>
           </Link>
 
           <div className="hidden items-center gap-8 md:flex">
@@ -425,8 +434,12 @@ export default function LandingPage() {
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
             <div className="lg:col-span-1">
               <div className="flex items-center gap-2">
-                <MessageSquareText className="h-6 w-6 text-blue-600" />
-                <span className="text-lg font-bold text-gray-900">ReviewFlow</span>
+                {logo_url ? (
+                  <img src={logo_url} alt={app_name} className="h-6 w-6 object-contain" />
+                ) : (
+                  <MessageSquareText className="h-6 w-6" style={{ color: primary_color }} />
+                )}
+                <span className="text-lg font-bold text-gray-900">{app_name}</span>
               </div>
               <p className="mt-3 text-sm leading-relaxed text-gray-500">
                 AI-powered Google review management for local businesses. Respond faster, look better, grow stronger.
@@ -464,7 +477,7 @@ export default function LandingPage() {
           </div>
 
           <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-gray-200 pt-8 sm:flex-row">
-            <p className="text-sm text-gray-400">© 2026 ReviewFlow. All rights reserved.</p>
+            <p className="text-sm text-gray-400">© 2026 {app_name}. All rights reserved.</p>
             <div className="flex items-center gap-1 text-sm text-gray-400">
               <span>Made with</span>
               <span className="text-red-400">♥</span>

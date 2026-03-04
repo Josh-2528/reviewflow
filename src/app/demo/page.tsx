@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { MessageSquareText, Loader2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
+import { AppLogo } from '@/components/app-logo'
 
 export default function DemoPage() {
   const [status, setStatus] = useState<'loading' | 'error'>('loading')
@@ -34,8 +35,7 @@ export default function DemoPage() {
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
       <div className="text-center">
         <div className="mb-6 inline-flex items-center gap-2">
-          <MessageSquareText className="h-8 w-8 text-blue-600" />
-          <span className="text-2xl font-bold text-gray-900">ReviewFlow</span>
+          <AppLogo size="large" />
         </div>
 
         {status === 'loading' && (

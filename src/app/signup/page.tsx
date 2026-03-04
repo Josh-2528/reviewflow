@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { MessageSquareText } from 'lucide-react'
+import { AppLogo } from '@/components/app-logo'
 
 export default function SignupPage() {
   const [email, setEmail] = useState('')
@@ -41,8 +41,7 @@ export default function SignupPage() {
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
           <Link href="/" className="inline-flex items-center gap-2">
-            <MessageSquareText className="h-8 w-8 text-blue-600" />
-            <span className="text-2xl font-bold text-gray-900">ReviewFlow</span>
+            <AppLogo size="large" />
           </Link>
           <p className="mt-2 text-sm text-gray-600">Create your account</p>
         </div>
