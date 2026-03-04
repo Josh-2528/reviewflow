@@ -204,9 +204,9 @@ export default function LandingPage() {
 
           <div className="grid gap-5 md:grid-cols-3">
             {[
-              { stat: '76%', text: 'of customers read Google reviews before visiting a car wash' },
-              { stat: '53%', text: "won't visit a business with unanswered negative reviews" },
-              { stat: '$572/yr', text: 'the average lifetime value of a single car wash customer lost to a bad review' },
+              { stat: '3 in 4', text: 'customers read Google reviews before visiting a car wash' },
+              { stat: 'Over half', text: "won't visit a business with unanswered negative reviews" },
+              { stat: '$572/yr', text: 'the average lifetime value of a single car wash customer lost to a bad review — based on $11/week average spend' },
             ].map((card) => (
               <div
                 key={card.stat}
@@ -266,7 +266,7 @@ export default function LandingPage() {
             {[
               { value: '2 min', label: 'Average reply time (down from 2 days)' },
               { value: '100%', label: 'Review response rate' },
-              { value: '0.4★', label: 'Average rating improvement in 90 days' },
+              { value: '24/7', label: 'Reviews monitored around the clock' },
               { value: '12hrs', label: 'Saved per month on review management' },
             ].map((s) => (
               <div key={s.value} className="rounded-2xl border border-white/10 bg-white/5 p-6 text-center backdrop-blur-sm">
@@ -380,9 +380,9 @@ export default function LandingPage() {
                 'Everything in Pro',
                 'Auto-publish replies',
                 'Priority support',
-                'Dedicated account manager',
+                'Priority email support',
                 'Weekly summary emails',
-                'Multi-location ready',
+                'Multi-location support (coming soon)',
               ]}
               cta="Start Business Trial"
               ctaHref="/signup"
