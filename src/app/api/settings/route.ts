@@ -26,6 +26,8 @@ export async function PUT(request: NextRequest) {
       'google_access_token',
       'google_refresh_token',
       'onboarding_completed',
+      'email_new_review',
+      'email_weekly_summary',
     ]
 
     const updates: Record<string, unknown> = {}

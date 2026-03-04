@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { fetchReviews, parseGoogleReview, postReply } from '@/lib/google'
 import { generateReviewReply } from '@/lib/claude'
 import { getPlanById, canReceiveReviews } from '@/lib/stripe'
+import { sendNewReviewEmail } from '@/lib/email'
 
 // Cron job to poll reviews for all connected users
 // Runs every 15 minutes via Vercel cron
@@ -86,6 +87,19 @@ export async function GET(request: NextRequest) {
           review_id: savedReview.id,
           details: `New ${parsed.star_rating}-star review from ${parsed.reviewer_name}`,
         })
+
+        // Send new review email notification
+        if (user.email_new_review !== false) {
+          const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+          sendNewReviewEmail({
+            to: user.email,
+            businessName: user.business_name || 'Your Business',
+            reviewerName: parsed.reviewer_name,
+            starRating: parsed.star_rating,
+            reviewText: parsed.review_text,
+            dashboardUrl: `${appUrl}/dashboard`,
+          }).catch((err) => console.error('Email send failed:', err))
+        }
 
         if (parsed.has_existing_reply) continue
 

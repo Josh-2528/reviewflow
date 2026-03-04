@@ -5,6 +5,7 @@ import { fetchReviews, parseGoogleReview } from '@/lib/google'
 import { generateReviewReply } from '@/lib/claude'
 import { postReply } from '@/lib/google'
 import { getPlanById, canReceiveReviews } from '@/lib/stripe'
+import { sendNewReviewEmail } from '@/lib/email'
 
 export async function POST() {
   try {
@@ -107,6 +108,19 @@ export async function POST() {
         review_id: savedReview.id,
         details: `New ${parsed.star_rating}-star review from ${parsed.reviewer_name}`,
       })
+
+      // Send new review email notification
+      if (profile.email_new_review !== false) {
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+        sendNewReviewEmail({
+          to: profile.email,
+          businessName: profile.business_name || 'Your Business',
+          reviewerName: parsed.reviewer_name,
+          starRating: parsed.star_rating,
+          reviewText: parsed.review_text,
+          dashboardUrl: `${appUrl}/dashboard`,
+        }).catch((err) => console.error('Email send failed:', err))
+      }
 
       // Skip reply generation for reviews that already have replies
       if (parsed.has_existing_reply) continue

@@ -17,6 +17,8 @@ export interface User {
   plan_id: string
   subscription_status: string | null
   subscription_current_period_end: string | null
+  email_new_review: boolean
+  email_weekly_summary: boolean
   created_at: string
   updated_at: string
 }

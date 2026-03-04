@@ -16,6 +16,7 @@ import {
   Link2,
   CreditCard,
   ExternalLink,
+  Mail,
 } from 'lucide-react'
 import type { User } from '@/lib/types'
 
@@ -33,6 +34,8 @@ export default function SettingsPage() {
   const [tonePreference, setTonePreference] = useState('')
   const [customInstructions, setCustomInstructions] = useState('')
   const [autoPublish, setAutoPublish] = useState(false)
+  const [emailNewReview, setEmailNewReview] = useState(true)
+  const [emailWeeklySummary, setEmailWeeklySummary] = useState(true)
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
@@ -49,6 +52,8 @@ export default function SettingsPage() {
         setTonePreference(p.tone_preference || 'friendly and professional')
         setCustomInstructions(p.custom_instructions || '')
         setAutoPublish(p.auto_publish || false)
+        setEmailNewReview(p.email_new_review !== false)
+        setEmailWeeklySummary(p.email_weekly_summary !== false)
       }
       setLoading(false)
     }
@@ -67,6 +72,8 @@ export default function SettingsPage() {
           tone_preference: tonePreference,
           custom_instructions: customInstructions || null,
           auto_publish: autoPublish,
+          email_new_review: emailNewReview,
+          email_weekly_summary: emailWeeklySummary,
         }),
       })
       if (res.ok) {
@@ -400,6 +407,58 @@ export default function SettingsPage() {
                   Manage Billing
                 </button>
               )}
+            </div>
+          </section>
+
+          {/* Email Notifications */}
+          <section className="mb-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            <div className="mb-4 flex items-center gap-2">
+              <Mail className="h-5 w-5 text-gray-400" />
+              <h2 className="text-lg font-semibold text-gray-900">Email Notifications</h2>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between rounded-lg border border-gray-200 p-4">
+                <div>
+                  <p className="font-medium text-gray-900">New review alerts</p>
+                  <p className="mt-0.5 text-sm text-gray-500">
+                    Get an email whenever a new review is posted
+                  </p>
+                </div>
+                <button
+                  onClick={() => setEmailNewReview(!emailNewReview)}
+                  className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+                    emailNewReview ? 'bg-blue-600' : 'bg-gray-200'
+                  }`}
+                >
+                  <span
+                    className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                      emailNewReview ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between rounded-lg border border-gray-200 p-4">
+                <div>
+                  <p className="font-medium text-gray-900">Weekly summary</p>
+                  <p className="mt-0.5 text-sm text-gray-500">
+                    Receive a summary every Monday with your weekly stats
+                  </p>
+                </div>
+                <button
+                  onClick={() => setEmailWeeklySummary(!emailWeeklySummary)}
+                  className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+                    emailWeeklySummary ? 'bg-blue-600' : 'bg-gray-200'
+                  }`}
+                >
+                  <span
+                    className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                      emailWeeklySummary ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
             </div>
           </section>
 
