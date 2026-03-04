@@ -1,21 +1,23 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { resolveUserId } from '@/lib/admin'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
+    const resolved = await resolveUserId(request)
+    if (!resolved) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { data: activities, error } = await supabase
+    const db = resolved.isImpersonating
+      ? createAdminClient()
+      : await createClient()
+
+    const { data: activities, error } = await db
       .from('activity_log')
       .select('*, review:reviews(reviewer_name, star_rating, review_text)')
-      .eq('user_id', user.id)
+      .eq('user_id', resolved.userId)
       .order('created_at', { ascending: false })
       .limit(100)
 

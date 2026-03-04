@@ -56,7 +56,9 @@ export async function updateSession(request: NextRequest) {
 
   if (isAuthPage && !isDemoPage && user) {
     const url = request.nextUrl.clone()
-    url.pathname = '/dashboard'
+    // Redirect admin to /admin, everyone else to /dashboard
+    const adminEmail = process.env.ADMIN_EMAIL
+    url.pathname = adminEmail && user.email === adminEmail ? '/admin' : '/dashboard'
     return NextResponse.redirect(url)
   }
 

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { format } from 'date-fns'
@@ -24,11 +24,21 @@ import {
 import { StarRating } from '@/components/star-rating'
 import { StatusBadge } from '@/components/status-badge'
 import { EditReplyModal } from '@/components/edit-reply-modal'
+import { ImpersonationBanner } from '@/components/impersonation-banner'
+import { Suspense } from 'react'
 import type { Review, DashboardStats } from '@/lib/types'
 
 type FilterTab = 'all' | 'needs_reply' | 'published' | 'skipped'
 
-export default function DashboardPage() {
+export default function DashboardPageWrapper() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><p className="text-gray-400">Loading...</p></div>}>
+      <DashboardPage />
+    </Suspense>
+  )
+}
+
+function DashboardPage() {
   const [reviews, setReviews] = useState<Review[]>([])
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [filter, setFilter] = useState<FilterTab>('all')
@@ -37,17 +47,23 @@ export default function DashboardPage() {
   const [editingReview, setEditingReview] = useState<Review | null>(null)
   const [planId, setPlanId] = useState<string>('free')
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const impersonateId = searchParams.get('impersonate')
+
+  // Build query string suffix for impersonation
+  const qs = impersonateId ? `&impersonate=${impersonateId}` : ''
+  const qsFirst = impersonateId ? `?impersonate=${impersonateId}` : ''
 
   const fetchReviews = useCallback(async () => {
-    const res = await fetch(`/api/reviews?status=${filter === 'all' ? '' : filter}`)
+    const res = await fetch(`/api/reviews?status=${filter === 'all' ? '' : filter}${qs}`)
     if (res.ok) {
       const data = await res.json()
       setReviews(data.reviews)
     }
-  }, [filter])
+  }, [filter, qs])
 
   const fetchStats = async () => {
-    const res = await fetch('/api/stats')
+    const res = await fetch(`/api/stats${qsFirst}`)
     if (res.ok) {
       const data = await res.json()
       setStats(data)
@@ -55,7 +71,7 @@ export default function DashboardPage() {
   }
 
   const fetchPlan = async () => {
-    const res = await fetch('/api/settings')
+    const res = await fetch(`/api/settings${qsFirst}`)
     if (res.ok) {
       const data = await res.json()
       setPlanId(data.profile?.plan_id || 'free')
@@ -223,6 +239,7 @@ export default function DashboardPage() {
 
       {/* Main Content */}
       <main className="lg:ml-56">
+        <ImpersonationBanner />
         <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
           {/* Page header */}
           <div className="mb-6 flex items-center justify-between">

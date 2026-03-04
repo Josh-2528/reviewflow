@@ -30,6 +30,17 @@ export default function LoginPage() {
       return
     }
 
+    // Check if user is admin by calling settings (middleware will also handle redirect)
+    try {
+      const res = await fetch('/api/admin/users')
+      if (res.ok) {
+        router.push('/admin')
+        return
+      }
+    } catch {
+      // Not admin — continue to dashboard
+    }
+
     router.push('/dashboard')
   }
 

@@ -1,32 +1,32 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { resolveUserId } from '@/lib/admin'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
+    const resolved = await resolveUserId(request)
+    if (!resolved) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const db = resolved.isImpersonating
+      ? createAdminClient()
+      : await createClient()
 
     const now = new Date()
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
 
-    // Total reviews this month
-    const { count: totalReviews } = await supabase
+    const { count: totalReviews } = await db
       .from('reviews')
       .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id)
+      .eq('user_id', resolved.userId)
       .gte('review_created_at', startOfMonth)
 
-    // Average rating this month
-    const { data: ratingData } = await supabase
+    const { data: ratingData } = await db
       .from('reviews')
       .select('star_rating')
-      .eq('user_id', user.id)
+      .eq('user_id', resolved.userId)
       .gte('review_created_at', startOfMonth)
 
     let averageRating = 0
@@ -35,18 +35,16 @@ export async function GET() {
       averageRating = Math.round((sum / ratingData.length) * 10) / 10
     }
 
-    // Reviews awaiting reply
-    const { count: awaitingReply } = await supabase
+    const { count: awaitingReply } = await db
       .from('reviews')
       .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id)
+      .eq('user_id', resolved.userId)
       .in('status', ['new', 'reply_generated'])
 
-    // Replies published this month
-    const { count: publishedReplies } = await supabase
+    const { count: publishedReplies } = await db
       .from('reviews')
       .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id)
+      .eq('user_id', resolved.userId)
       .eq('status', 'published')
       .gte('created_at', startOfMonth)
 

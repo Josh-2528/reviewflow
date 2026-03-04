@@ -1,10 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
+import { Suspense } from 'react'
+import { ImpersonationBanner } from '@/components/impersonation-banner'
 import {
   MessageSquareText,
   BarChart3,
@@ -27,7 +29,15 @@ const toneOptions = [
   { value: 'short and direct', label: 'Short & Direct' },
 ]
 
-export default function SettingsPage() {
+export default function SettingsPageWrapper() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><p className="text-gray-400">Loading...</p></div>}>
+      <SettingsPage />
+    </Suspense>
+  )
+}
+
+function SettingsPage() {
   const [profile, setProfile] = useState<User | null>(null)
   const [businessName, setBusinessName] = useState('')
   const [businessLocation, setBusinessLocation] = useState('')
@@ -39,10 +49,13 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const impersonateId = searchParams.get('impersonate')
+  const qsFirst = impersonateId ? `?impersonate=${impersonateId}` : ''
 
   useEffect(() => {
     const loadProfile = async () => {
-      const res = await fetch('/api/settings')
+      const res = await fetch(`/api/settings${qsFirst}`)
       if (res.ok) {
         const data = await res.json()
         const p = data.profile
@@ -214,6 +227,7 @@ export default function SettingsPage() {
 
       {/* Main Content */}
       <main className="lg:ml-56">
+        <ImpersonationBanner />
         <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6">
           <h1 className="mb-8 text-2xl font-bold text-gray-900">Settings</h1>
 

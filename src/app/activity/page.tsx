@@ -1,10 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { format } from 'date-fns'
+import { Suspense } from 'react'
+import { ImpersonationBanner } from '@/components/impersonation-banner'
 import {
   MessageSquareText,
   BarChart3,
@@ -56,14 +58,25 @@ const actionConfig: Record<
   },
 }
 
-export default function ActivityPage() {
+export default function ActivityPageWrapper() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><p className="text-gray-400">Loading...</p></div>}>
+      <ActivityPage />
+    </Suspense>
+  )
+}
+
+function ActivityPage() {
   const [activities, setActivities] = useState<ActivityLogEntry[]>([])
   const [loading, setLoading] = useState(true)
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const impersonateId = searchParams.get('impersonate')
+  const qsFirst = impersonateId ? `?impersonate=${impersonateId}` : ''
 
   useEffect(() => {
     const load = async () => {
-      const res = await fetch('/api/activity')
+      const res = await fetch(`/api/activity${qsFirst}`)
       if (res.ok) {
         const data = await res.json()
         setActivities(data.activities)
@@ -146,6 +159,7 @@ export default function ActivityPage() {
 
       {/* Main Content */}
       <main className="lg:ml-56">
+        <ImpersonationBanner />
         <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
           <h1 className="mb-8 text-2xl font-bold text-gray-900">Activity Log</h1>
 

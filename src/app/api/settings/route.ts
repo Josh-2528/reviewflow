@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { resolveUserId } from '@/lib/admin'
 
 export async function PUT(request: NextRequest) {
   try {
@@ -68,21 +69,21 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
+    const resolved = await resolveUserId(request)
+    if (!resolved) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { data: profile, error } = await supabase
+    const db = resolved.isImpersonating
+      ? createAdminClient()
+      : await createClient()
+
+    const { data: profile, error } = await db
       .from('users')
       .select('*')
-      .eq('id', user.id)
+      .eq('id', resolved.userId)
       .single()
 
     if (error || !profile) {

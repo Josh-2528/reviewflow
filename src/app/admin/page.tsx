@@ -19,6 +19,7 @@ import {
   Search,
   Link2,
   Unplug,
+  Eye,
 } from 'lucide-react'
 
 interface AdminUser {
@@ -323,13 +324,22 @@ export default function AdminPage() {
                           </button>
                         </div>
                       ) : (
-                        <button
-                          onClick={() => setConfirmDelete(user.id)}
-                          className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
-                          title="Delete user"
-                        >
-                          <Trash2 size={15} />
-                        </button>
+                        <div className="flex items-center justify-end gap-1">
+                          <Link
+                            href={`/dashboard?impersonate=${user.id}`}
+                            className="rounded-lg p-1.5 text-gray-400 hover:bg-blue-50 hover:text-blue-600"
+                            title="View as this user"
+                          >
+                            <Eye size={15} />
+                          </Link>
+                          <button
+                            onClick={() => setConfirmDelete(user.id)}
+                            className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                            title="Delete user"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
                       )}
                     </td>
                   </tr>
