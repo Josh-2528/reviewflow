@@ -12,7 +12,6 @@ function getResend(): Resend {
 
 function getFromEmail(): string {
   const raw = process.env.RESEND_FROM_EMAIL
-  console.log('[Email] Raw RESEND_FROM_EMAIL env var:', JSON.stringify(raw))
   if (raw && raw.includes('@')) {
     return raw
   }
@@ -21,7 +20,6 @@ function getFromEmail(): string {
 
 function getDashboardUrl(): string {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL
-  console.log('[Email] Raw NEXT_PUBLIC_APP_URL env var:', JSON.stringify(appUrl))
   if (appUrl && !appUrl.includes('localhost')) {
     return `${appUrl}/dashboard`
   }
@@ -101,8 +99,6 @@ export async function sendNewReviewEmail(params: NewReviewEmailParams) {
     : `<p style="color: #9ca3af; font-size: 14px; font-style: italic; margin: 16px 0;">No review text — rating only</p>`
 
   const subject = `New ${starRating}-Star Review at ${displayName}`
-
-  console.log('[Email] sendNewReviewEmail called:', { to, from: fromEmail, subject, dashboardUrl })
 
   try {
     await getResend().emails.send({
