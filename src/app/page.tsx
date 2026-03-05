@@ -40,6 +40,7 @@ export default function LandingPage() {
           <div className="hidden items-center gap-8 md:flex">
             <a href="#features" className="text-sm font-medium text-gray-300 transition-colors hover:text-white">Features</a>
             <a href="#pricing" className="text-sm font-medium text-gray-300 transition-colors hover:text-white">Pricing</a>
+            <a href="https://carwashai.com.au" target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-gray-300 transition-colors hover:text-white">WashBot</a>
             <a href="#faq" className="text-sm font-medium text-gray-300 transition-colors hover:text-white">FAQ</a>
           </div>
 
@@ -534,6 +535,7 @@ export default function LandingPage() {
               <a href="#features" className="text-sm text-gray-400 transition-colors hover:text-white">Features</a>
               <a href="#pricing" className="text-sm text-gray-400 transition-colors hover:text-white">Pricing</a>
               <a href="#faq" className="text-sm text-gray-400 transition-colors hover:text-white">FAQ</a>
+              <Link href="/terms" className="text-sm text-gray-400 transition-colors hover:text-white">Terms</Link>
               <Link href="/login" className="text-sm text-gray-400 transition-colors hover:text-white">Login</Link>
             </div>
           </div>

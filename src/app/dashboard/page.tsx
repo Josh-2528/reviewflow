@@ -7,7 +7,6 @@ import { createClient } from '@/lib/supabase/client'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
 import {
-  MessageSquareText,
   RefreshCw,
   Star,
   BarChart3,
@@ -22,6 +21,7 @@ import {
   Pencil,
   Lock,
   AlertTriangle,
+  MapPin,
 } from 'lucide-react'
 import { StarRating } from '@/components/star-rating'
 import { StatusBadge } from '@/components/status-badge'
@@ -30,10 +30,11 @@ import { ImpersonationBanner } from '@/components/impersonation-banner'
 import { AppLogo } from '@/components/app-logo'
 import { GettingStartedChecklist } from '@/components/getting-started-checklist'
 import { Suspense } from 'react'
-import type { Review, DashboardStats } from '@/lib/types'
+import type { Review, DashboardStats, Location } from '@/lib/types'
 
 type PlanStatus = 'trial' | 'pro' | 'expired'
 type FilterTab = 'all' | 'needs_reply' | 'published' | 'skipped'
+type SortOption = 'newest' | 'oldest' | 'highest' | 'lowest'
 
 export default function DashboardPageWrapper() {
   return (
@@ -47,6 +48,10 @@ function DashboardPage() {
   const [reviews, setReviews] = useState<Review[]>([])
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [filter, setFilter] = useState<FilterTab>('all')
+  const [sortBy, setSortBy] = useState<SortOption>('newest')
+  const [starFilter, setStarFilter] = useState<number | null>(null)
+  const [locations, setLocations] = useState<Location[]>([])
+  const [selectedLocationId, setSelectedLocationId] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [editingReview, setEditingReview] = useState<Review | null>(null)
@@ -57,25 +62,34 @@ function DashboardPage() {
   const searchParams = useSearchParams()
   const impersonateId = searchParams.get('impersonate')
 
-  // Build query string suffix for impersonation
-  const qs = impersonateId ? `&impersonate=${impersonateId}` : ''
   const qsFirst = impersonateId ? `?impersonate=${impersonateId}` : ''
 
   const fetchReviews = useCallback(async () => {
-    const res = await fetch(`/api/reviews?status=${filter === 'all' ? '' : filter}${qs}`)
+    const params = new URLSearchParams()
+    if (filter !== 'all') params.set('status', filter)
+    if (selectedLocationId) params.set('location_id', selectedLocationId)
+    if (sortBy !== 'newest') params.set('sort', sortBy)
+    if (starFilter) params.set('star_rating', String(starFilter))
+    if (impersonateId) params.set('impersonate', impersonateId)
+
+    const res = await fetch(`/api/reviews?${params.toString()}`)
     if (res.ok) {
       const data = await res.json()
       setReviews(data.reviews)
     }
-  }, [filter, qs])
+  }, [filter, selectedLocationId, sortBy, starFilter, impersonateId])
 
-  const fetchStats = async () => {
-    const res = await fetch(`/api/stats${qsFirst}`)
+  const fetchStats = useCallback(async () => {
+    const params = new URLSearchParams()
+    if (selectedLocationId) params.set('location_id', selectedLocationId)
+    if (impersonateId) params.set('impersonate', impersonateId)
+
+    const res = await fetch(`/api/stats?${params.toString()}`)
     if (res.ok) {
       const data = await res.json()
       setStats(data)
     }
-  }
+  }, [selectedLocationId, impersonateId])
 
   const fetchPlan = async () => {
     const res = await fetch(`/api/settings${qsFirst}`)
@@ -83,7 +97,7 @@ function DashboardPage() {
       const data = await res.json()
       setPlanStatus(data.planStatus || 'trial')
       setTrialDaysRemaining(data.trialDaysRemaining ?? 14)
-      // Check if this is the demo account
+      if (data.locations) setLocations(data.locations)
       if (data.profile?.email === 'demo@reviewflow.app') {
         setIsDemo(true)
       }
@@ -97,17 +111,11 @@ function DashboardPage() {
       setLoading(false)
     }
     init()
-  }, [fetchReviews])
+  }, [fetchReviews, fetchStats])
 
   const handleRefresh = async () => {
-    if (isDemo) {
-      toast.error('Sign up to use this feature with your real reviews')
-      return
-    }
-    if (planStatus === 'expired') {
-      toast.error('Your trial has ended. Subscribe to continue managing your reviews.')
-      return
-    }
+    if (isDemo) { toast.error('Sign up to use this feature with your real reviews'); return }
+    if (planStatus === 'expired') { toast.error('Your trial has ended. Subscribe to continue managing your reviews.'); return }
     setRefreshing(true)
     try {
       const res = await fetch('/api/reviews/refresh', { method: 'POST' })
@@ -118,21 +126,13 @@ function DashboardPage() {
       } else {
         toast.error(data.error || 'Failed to refresh reviews')
       }
-    } catch {
-      toast.error('Failed to refresh reviews')
-    }
+    } catch { toast.error('Failed to refresh reviews') }
     setRefreshing(false)
   }
 
   const handleApprove = async (reviewId: string) => {
-    if (isDemo) {
-      toast.error('Sign up to use this feature with your real reviews')
-      return
-    }
-    if (planStatus === 'expired') {
-      toast.error('Your trial has ended. Subscribe to continue managing your reviews.')
-      return
-    }
+    if (isDemo) { toast.error('Sign up to use this feature with your real reviews'); return }
+    if (planStatus === 'expired') { toast.error('Your trial has ended. Subscribe to continue managing your reviews.'); return }
     try {
       const res = await fetch('/api/replies/approve', {
         method: 'POST',
@@ -143,23 +143,13 @@ function DashboardPage() {
       if (res.ok) {
         toast.success('Reply published successfully!')
         await Promise.all([fetchReviews(), fetchStats()])
-      } else {
-        toast.error(data.error || 'Failed to approve reply')
-      }
-    } catch {
-      toast.error('Failed to approve reply')
-    }
+      } else { toast.error(data.error || 'Failed to approve reply') }
+    } catch { toast.error('Failed to approve reply') }
   }
 
   const handleEdit = async (reviewId: string, editedText: string) => {
-    if (isDemo) {
-      toast.error('Sign up to use this feature with your real reviews')
-      return
-    }
-    if (planStatus === 'expired') {
-      toast.error('Your trial has ended. Subscribe to continue managing your reviews.')
-      return
-    }
+    if (isDemo) { toast.error('Sign up to use this feature with your real reviews'); return }
+    if (planStatus === 'expired') { toast.error('Your trial has ended. Subscribe to continue managing your reviews.'); return }
     const res = await fetch('/api/replies/edit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -176,14 +166,8 @@ function DashboardPage() {
   }
 
   const handleSkip = async (reviewId: string) => {
-    if (isDemo) {
-      toast.error('Sign up to use this feature with your real reviews')
-      return
-    }
-    if (planStatus === 'expired') {
-      toast.error('Your trial has ended. Subscribe to continue managing your reviews.')
-      return
-    }
+    if (isDemo) { toast.error('Sign up to use this feature with your real reviews'); return }
+    if (planStatus === 'expired') { toast.error('Your trial has ended. Subscribe to continue managing your reviews.'); return }
     try {
       const res = await fetch('/api/replies/skip', {
         method: 'POST',
@@ -193,12 +177,8 @@ function DashboardPage() {
       if (res.ok) {
         toast.success('Review skipped')
         await Promise.all([fetchReviews(), fetchStats()])
-      } else {
-        toast.error('Failed to skip review')
-      }
-    } catch {
-      toast.error('Failed to skip review')
-    }
+      } else { toast.error('Failed to skip review') }
+    } catch { toast.error('Failed to skip review') }
   }
 
   const handleLogout = async () => {
@@ -222,38 +202,20 @@ function DashboardPage() {
           <div className="flex items-center gap-2 border-b px-5 py-4">
             <AppLogo />
           </div>
-
           <nav className="flex-1 space-y-1 px-3 py-4">
-            <Link
-              href="/dashboard"
-              className="flex items-center gap-3 rounded-lg bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700"
-            >
-              <BarChart3 size={18} />
-              Dashboard
+            <Link href="/dashboard" className="flex items-center gap-3 rounded-lg bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700">
+              <BarChart3 size={18} />Dashboard
             </Link>
-            <Link
-              href="/activity"
-              className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
-            >
-              <Activity size={18} />
-              Activity Log
+            <Link href="/activity" className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">
+              <Activity size={18} />Activity Log
             </Link>
-            <Link
-              href="/settings"
-              className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
-            >
-              <Settings size={18} />
-              Settings
+            <Link href="/settings" className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">
+              <Settings size={18} />Settings
             </Link>
           </nav>
-
           <div className="border-t px-3 py-4">
-            <button
-              onClick={handleLogout}
-              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
-            >
-              <LogOut size={18} />
-              Log out
+            <button onClick={handleLogout} className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">
+              <LogOut size={18} />Log out
             </button>
           </div>
         </div>
@@ -262,19 +224,11 @@ function DashboardPage() {
       {/* Mobile header */}
       <header className="sticky top-0 z-30 border-b border-gray-200 bg-white lg:hidden">
         <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-2"><AppLogo size="small" /></div>
           <div className="flex items-center gap-2">
-            <AppLogo size="small" />
-          </div>
-          <div className="flex items-center gap-2">
-            <Link href="/activity" className="rounded-lg p-2 text-gray-600 hover:bg-gray-100">
-              <Activity size={20} />
-            </Link>
-            <Link href="/settings" className="rounded-lg p-2 text-gray-600 hover:bg-gray-100">
-              <Settings size={20} />
-            </Link>
-            <button onClick={handleLogout} className="rounded-lg p-2 text-gray-600 hover:bg-gray-100">
-              <LogOut size={20} />
-            </button>
+            <Link href="/activity" className="rounded-lg p-2 text-gray-600 hover:bg-gray-100"><Activity size={20} /></Link>
+            <Link href="/settings" className="rounded-lg p-2 text-gray-600 hover:bg-gray-100"><Settings size={20} /></Link>
+            <button onClick={handleLogout} className="rounded-lg p-2 text-gray-600 hover:bg-gray-100"><LogOut size={20} /></button>
           </div>
         </div>
       </header>
@@ -287,15 +241,8 @@ function DashboardPage() {
         {isDemo && (
           <div className="border-b border-amber-200 bg-amber-50 px-4 py-3">
             <div className="mx-auto flex max-w-4xl items-center justify-between">
-              <p className="text-sm text-amber-800">
-                👀 You&apos;re viewing a demo. Start your free trial to connect your own Google reviews.
-              </p>
-              <Link
-                href="/signup"
-                className="shrink-0 rounded-lg bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
-              >
-                Start Free Trial →
-              </Link>
+              <p className="text-sm text-amber-800">👀 You&apos;re viewing a demo. Start your free trial to connect your own Google reviews.</p>
+              <Link href="/signup" className="shrink-0 rounded-lg bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-emerald-700">Start Free Trial →</Link>
             </div>
           </div>
         )}
@@ -304,15 +251,8 @@ function DashboardPage() {
         {!isDemo && planStatus === 'trial' && (
           <div className="border-b border-emerald-200 bg-emerald-50 px-4 py-3">
             <div className="mx-auto flex max-w-4xl items-center justify-between">
-              <p className="text-sm text-emerald-800">
-                🎉 You&apos;re on your 14-day free trial. <strong>{trialDaysRemaining} day{trialDaysRemaining !== 1 ? 's' : ''} remaining.</strong>
-              </p>
-              <Link
-                href="/pricing"
-                className="shrink-0 rounded-lg bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
-              >
-                Subscribe Now
-              </Link>
+              <p className="text-sm text-emerald-800">🎉 You&apos;re on your 14-day free trial. <strong>{trialDaysRemaining} day{trialDaysRemaining !== 1 ? 's' : ''} remaining.</strong></p>
+              <Link href="/pricing" className="shrink-0 rounded-lg bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-emerald-700">Subscribe Now</Link>
             </div>
           </div>
         )}
@@ -324,20 +264,11 @@ function DashboardPage() {
               <div className="flex items-center gap-3">
                 <AlertTriangle className="h-5 w-5 text-red-600" />
                 <div>
-                  <p className="text-sm font-medium text-red-800">
-                    Your trial has ended.
-                  </p>
-                  <p className="text-sm text-red-700">
-                    Subscribe to continue managing your reviews. AI replies, polling, and publishing are disabled.
-                  </p>
+                  <p className="text-sm font-medium text-red-800">Your trial has ended.</p>
+                  <p className="text-sm text-red-700">Subscribe to continue managing your reviews. AI replies, polling, and publishing are disabled.</p>
                 </div>
               </div>
-              <Link
-                href="/pricing"
-                className="shrink-0 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
-              >
-                Subscribe Now
-              </Link>
+              <Link href="/pricing" className="shrink-0 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">Subscribe Now</Link>
             </div>
           </div>
         )}
@@ -359,31 +290,63 @@ function DashboardPage() {
           {/* Stats Cards */}
           {stats && (
             <div className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
-              <StatCard
-                icon={<Star className="h-5 w-5 text-amber-500" />}
-                label="Reviews This Month"
-                value={stats.total_reviews_this_month}
-              />
-              <StatCard
-                icon={<Star className="h-5 w-5 text-amber-500" />}
-                label="Avg Rating"
-                value={stats.average_rating_this_month || '—'}
-              />
-              <StatCard
-                icon={<Clock className="h-5 w-5 text-blue-500" />}
-                label="Awaiting Reply"
-                value={stats.reviews_awaiting_reply}
-              />
-              <StatCard
-                icon={<Send className="h-5 w-5 text-green-500" />}
-                label="Published This Month"
-                value={stats.replies_published_this_month}
-              />
+              <StatCard icon={<Star className="h-5 w-5 text-amber-500" />} label="Reviews This Month" value={stats.total_reviews_this_month} />
+              <StatCard icon={<Star className="h-5 w-5 text-amber-500" />} label="Avg Rating" value={stats.average_rating_this_month || '—'} />
+              <StatCard icon={<Clock className="h-5 w-5 text-blue-500" />} label="Awaiting Reply" value={stats.reviews_awaiting_reply} />
+              <StatCard icon={<Send className="h-5 w-5 text-green-500" />} label="Published This Month" value={stats.replies_published_this_month} />
             </div>
           )}
 
           {/* Getting Started Checklist — not shown in demo */}
           {!isDemo && <GettingStartedChecklist impersonateQs={qsFirst} />}
+
+          {/* Location Filter + Sort Controls */}
+          <div className="mb-4 flex flex-wrap items-center gap-3">
+            {/* Location dropdown (only if user has locations) */}
+            {locations.length > 0 && (
+              <div className="flex items-center gap-2">
+                <MapPin size={14} className="text-gray-400" />
+                <select
+                  value={selectedLocationId}
+                  onChange={(e) => setSelectedLocationId(e.target.value)}
+                  className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="">All Locations</option>
+                  {locations.map((loc) => (
+                    <option key={loc.id} value={loc.id}>
+                      {loc.location_name || loc.location_address || 'Unnamed Location'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Sort dropdown */}
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortOption)}
+              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+              <option value="newest">Newest First</option>
+              <option value="oldest">Oldest First</option>
+              <option value="highest">Highest Rating</option>
+              <option value="lowest">Lowest Rating</option>
+            </select>
+
+            {/* Star rating filter */}
+            <select
+              value={starFilter ?? ''}
+              onChange={(e) => setStarFilter(e.target.value ? parseInt(e.target.value, 10) : null)}
+              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+              <option value="">All Ratings</option>
+              <option value="1">1 Star</option>
+              <option value="2">2 Stars</option>
+              <option value="3">3 Stars</option>
+              <option value="4">4 Stars</option>
+              <option value="5">5 Stars</option>
+            </select>
+          </div>
 
           {/* Filter Tabs */}
           <div className="mb-6 flex gap-1 rounded-lg border border-gray-200 bg-white p-1">
@@ -426,6 +389,7 @@ function DashboardPage() {
                   onSkip={handleSkip}
                   isDemo={isDemo}
                   isExpired={planStatus === 'expired'}
+                  showLocation={locations.length > 0 && !selectedLocationId}
                 />
               ))}
             </div>
@@ -445,15 +409,7 @@ function DashboardPage() {
   )
 }
 
-function StatCard({
-  icon,
-  label,
-  value,
-}: {
-  icon: React.ReactNode
-  label: string
-  value: number | string
-}) {
+function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: number | string }) {
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
       <div className="mb-2 flex items-center gap-2">
@@ -472,6 +428,7 @@ function ReviewCard({
   onSkip,
   isDemo,
   isExpired,
+  showLocation,
 }: {
   review: Review
   onApprove: (id: string) => void
@@ -479,23 +436,16 @@ function ReviewCard({
   onSkip: (id: string) => void
   isDemo: boolean
   isExpired: boolean
+  showLocation: boolean
 }) {
   const [approving, setApproving] = useState(false)
   const [skipping, setSkipping] = useState(false)
 
-  const handleApprove = async () => {
-    setApproving(true)
-    await onApprove(review.id)
-    setApproving(false)
-  }
-
-  const handleSkip = async () => {
-    setSkipping(true)
-    await onSkip(review.id)
-    setSkipping(false)
-  }
+  const handleApprove = async () => { setApproving(true); await onApprove(review.id); setApproving(false) }
+  const handleSkip = async () => { setSkipping(true); await onSkip(review.id); setSkipping(false) }
 
   const actionsDisabled = isDemo || isExpired
+  const locationName = review.location?.location_name
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
@@ -504,11 +454,7 @@ function ReviewCard({
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             {review.reviewer_photo_url ? (
-              <img
-                src={review.reviewer_photo_url}
-                alt={review.reviewer_name}
-                className="h-10 w-10 rounded-full"
-              />
+              <img src={review.reviewer_photo_url} alt={review.reviewer_name} className="h-10 w-10 rounded-full" />
             ) : (
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-sm font-medium text-gray-500">
                 {review.reviewer_name.charAt(0).toUpperCase()}
@@ -518,74 +464,52 @@ function ReviewCard({
               <p className="font-medium text-gray-900">{review.reviewer_name}</p>
               <div className="mt-0.5 flex items-center gap-2">
                 <StarRating rating={review.star_rating} size={14} />
-                <span className="text-xs text-gray-400">
-                  {format(new Date(review.review_created_at), 'MMM d, yyyy')}
-                </span>
+                <span className="text-xs text-gray-400">{format(new Date(review.review_created_at), 'MMM d, yyyy')}</span>
               </div>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {review.test_review && (
-              <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
-                Test
+            {showLocation && locationName && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-600">
+                <MapPin size={10} />
+                {locationName}
               </span>
+            )}
+            {review.test_review && (
+              <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">Test</span>
             )}
             <StatusBadge status={review.status} />
           </div>
         </div>
 
         {review.review_text ? (
-          <p className="mt-3 text-sm leading-relaxed text-gray-700">
-            {review.review_text}
-          </p>
+          <p className="mt-3 text-sm leading-relaxed text-gray-700">{review.review_text}</p>
         ) : (
-          <p className="mt-3 text-sm italic text-gray-400">
-            Rating only — no review text
-          </p>
+          <p className="mt-3 text-sm italic text-gray-400">Rating only — no review text</p>
         )}
       </div>
 
       {/* Reply Section */}
       {review.reply && review.status === 'reply_generated' && (
         <div className="border-t border-gray-100 bg-blue-50/50 p-5">
-          <p className="mb-1 text-xs font-medium uppercase tracking-wide text-blue-600">
-            AI Draft Reply
-          </p>
-          <p className="mb-4 text-sm leading-relaxed text-gray-700">
-            {review.reply.final_text}
-          </p>
+          <p className="mb-1 text-xs font-medium uppercase tracking-wide text-blue-600">AI Draft Reply</p>
+          <p className="mb-4 text-sm leading-relaxed text-gray-700">{review.reply.final_text}</p>
           <div className="flex gap-2">
             {actionsDisabled ? (
               <div className="flex items-center gap-2 text-sm text-gray-500">
                 <Lock size={14} />
-                {isDemo
-                  ? 'Sign up to use this feature with your real reviews'
-                  : 'Subscribe to manage your reviews'}
+                {isDemo ? 'Sign up to use this feature with your real reviews' : 'Subscribe to manage your reviews'}
               </div>
             ) : (
               <>
-                <button
-                  onClick={handleApprove}
-                  disabled={approving}
-                  className="flex items-center gap-1.5 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
-                >
-                  <Check size={14} />
-                  {approving ? 'Publishing...' : 'Approve'}
+                <button onClick={handleApprove} disabled={approving} className="flex items-center gap-1.5 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50">
+                  <Check size={14} />{approving ? 'Publishing...' : 'Approve'}
                 </button>
-                <button
-                  onClick={onEdit}
-                  className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-                >
-                  <Pencil size={14} />
-                  Edit
+                <button onClick={onEdit} className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+                  <Pencil size={14} />Edit
                 </button>
-                <button
-                  onClick={handleSkip}
-                  disabled={skipping}
-                  className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50"
-                >
-                  <X size={14} />
-                  Skip
+                <button onClick={handleSkip} disabled={skipping} className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50">
+                  <X size={14} />Skip
                 </button>
               </>
             )}
@@ -597,23 +521,15 @@ function ReviewCard({
       {review.reply && review.status === 'published' && (
         <div className="border-t border-gray-100 bg-green-50/50 p-5">
           <div className="mb-1 flex items-center gap-2">
-            <p className="text-xs font-medium uppercase tracking-wide text-green-600">
-              Published Reply
-            </p>
+            <p className="text-xs font-medium uppercase tracking-wide text-green-600">Published Reply</p>
             {review.reply.auto_published && (
-              <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-700">
-                Auto-published
-              </span>
+              <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-700">Auto-published</span>
             )}
             {review.reply.published_at && (
-              <span className="text-xs text-gray-400">
-                · {format(new Date(review.reply.published_at), 'MMM d, yyyy h:mm a')}
-              </span>
+              <span className="text-xs text-gray-400">· {format(new Date(review.reply.published_at), 'MMM d, yyyy h:mm a')}</span>
             )}
           </div>
-          <p className="text-sm leading-relaxed text-gray-700">
-            {review.reply.final_text}
-          </p>
+          <p className="text-sm leading-relaxed text-gray-700">{review.reply.final_text}</p>
         </div>
       )}
     </div>

@@ -12,6 +12,7 @@ import {
   ChevronDown,
   ChevronUp,
   Sparkles,
+  Phone,
 } from 'lucide-react'
 import type { OnboardingProgress } from '@/lib/types'
 
@@ -44,6 +45,13 @@ const steps: Step[] = [
     description: 'Send a reply live to Google so your customers can see it.',
     icon: <Send size={16} />,
     href: '/dashboard',
+  },
+  {
+    key: 'has_contact_details',
+    label: 'Set up contact details for replies',
+    description: 'Add your contact email so the AI can direct unhappy customers to get in touch.',
+    icon: <Phone size={16} />,
+    href: '/settings',
   },
   {
     key: 'email_notifications_on',
@@ -121,7 +129,7 @@ export function GettingStartedChecklist({
       {/* Steps */}
       {!collapsed && (
         <div className="border-t border-gray-100 px-5 py-3">
-          {steps.map((step, i) => {
+          {steps.map((step) => {
             const done = progress[step.key]
             return (
               <Link

@@ -8,14 +8,14 @@ const anthropic = new Anthropic({
 
 // ── Default prompts (used when no DB settings exist) ────────────────
 
-const DEFAULT_BASE_PROMPT = `You are a professional review reply assistant for a car wash business. Write friendly, human-sounding replies that match the business owner's tone. Never sound robotic or generic. Address specific details mentioned in the review. Keep replies concise — 2-4 sentences max.`
+const DEFAULT_BASE_PROMPT = `You write Google Review replies as a car wash owner. Be professional, be human, keep it short. Rules: Only reference facts from the review and from this prompt. Never invent details, weather, emotions, promises, solutions, or operational changes. Never use placeholders, brackets, or notes. Every reply must be publish-ready. If a reviewer name is available, use their first name. If not, skip it. Only include contact details if provided below. Only use the sign-off if provided below. Never open with Thank you for your feedback or I am sorry to hear that. Never use valued customer, rest assured, we strive to, or your patronage.`
 
 const DEFAULT_STAR_INSTRUCTIONS: Record<number, string> = {
-  1: `Apologise sincerely. Acknowledge their frustration. Invite them to contact the business directly to resolve the issue. Never offer refunds or compensation unless the business instructions say otherwise. Keep it professional and empathetic.`,
-  2: `Acknowledge the mixed experience. Thank them for the feedback. Mention that the team is working to improve. Invite them to give you another try.`,
-  3: `Thank them for the honest feedback. Acknowledge what went well and what could improve. Show you take feedback seriously.`,
-  4: `Thank them warmly. Acknowledge the specific positive things they mentioned. Express hope to earn that 5th star next time.`,
-  5: `Thank them enthusiastically. Reference specific details from their review. Invite them back. Keep it warm and genuine.`,
+  1: `2-3 sentences. Acknowledge the issue. Apologise. If contact details are provided, direct them to get in touch. CRITICAL: Only mention what the reviewer actually wrote. Do not add details they did not mention.`,
+  2: `2-3 sentences. Acknowledge what went wrong. Apologise. If contact details are provided, direct them to get in touch. CRITICAL: Only mention what the reviewer actually wrote.`,
+  3: `2-3 sentences. Acknowledge their concern honestly. No made-up fixes. If contact details are provided, mention them. CRITICAL: Only mention what the reviewer actually wrote.`,
+  4: `2-3 sentences. Positive. If they mentioned a gap, acknowledge it briefly. Do not overcompensate. CRITICAL: Only mention what the reviewer actually wrote.`,
+  5: `1-2 sentences. Quick and genuine. Acknowledge what they said, move on. CRITICAL: Only mention what the reviewer actually wrote.`,
 }
 
 // ── Prompt builder (exported for preview endpoint) ──────────────────
@@ -168,30 +168,61 @@ Write a reply in 1-3 sentences.${
 // ── Fetch AI settings from DB ───────────────────────────────────────
 
 async function getAISettings(
-  userId: string
+  userId: string,
+  locationId?: string | null
 ): Promise<{
   global: AIPromptSettings | null
   customer: AIPromptSettings | null
 }> {
   const adminClient = createAdminClient()
 
-  // Fetch global and customer-specific settings in parallel
-  const [globalResult, customerResult] = await Promise.all([
-    adminClient
-      .from('ai_prompt_settings')
-      .select('*')
-      .is('user_id', null)
-      .single(),
-    adminClient
+  // Fetch global settings
+  const globalPromise = adminClient
+    .from('ai_prompt_settings')
+    .select('*')
+    .is('user_id', null)
+    .single()
+
+  // Fetch customer settings - prefer location-specific, fall back to user-level
+  let customerPromise
+  if (locationId) {
+    // Try location-specific first
+    customerPromise = adminClient
       .from('ai_prompt_settings')
       .select('*')
       .eq('user_id', userId)
-      .single(),
+      .eq('location_id', locationId)
+      .single()
+  } else {
+    customerPromise = adminClient
+      .from('ai_prompt_settings')
+      .select('*')
+      .eq('user_id', userId)
+      .is('location_id', null)
+      .single()
+  }
+
+  const [globalResult, customerResult] = await Promise.all([
+    globalPromise,
+    customerPromise,
   ])
+
+  let customer = customerResult.data || null
+
+  // If we searched for location-specific and found nothing, fall back to user-level
+  if (!customer && locationId) {
+    const { data: userLevel } = await adminClient
+      .from('ai_prompt_settings')
+      .select('*')
+      .eq('user_id', userId)
+      .is('location_id', null)
+      .single()
+    customer = userLevel || null
+  }
 
   return {
     global: globalResult.data || null,
-    customer: customerResult.data || null,
+    customer,
   }
 }
 
@@ -206,6 +237,7 @@ interface GenerateReplyParams {
   starRating: number
   reviewText: string | null
   reviewerName?: string
+  locationId?: string | null
 }
 
 export async function generateReviewReply(
@@ -220,11 +252,12 @@ export async function generateReviewReply(
     starRating,
     reviewText,
     reviewerName,
+    locationId,
   } = params
 
   // Fetch AI settings from DB
   const { global: globalSettings, customer: customerSettings } =
-    await getAISettings(userId)
+    await getAISettings(userId, locationId)
 
   // If the customer has user-facing tone/instructions but no ai_prompt_settings row,
   // create a virtual settings object that includes their preferences

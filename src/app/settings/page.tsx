@@ -21,8 +21,13 @@ import {
   ExternalLink,
   Mail,
   AlertTriangle,
+  MapPin,
+  Plus,
+  Trash2,
+  Phone,
+  AtSign,
 } from 'lucide-react'
-import type { User } from '@/lib/types'
+import type { User, Location } from '@/lib/types'
 
 type PlanStatus = 'trial' | 'pro' | 'expired'
 
@@ -54,6 +59,12 @@ function SettingsPage() {
   const [emailWeeklySummary, setEmailWeeklySummary] = useState(true)
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [locations, setLocations] = useState<Location[]>([])
+  const [contactEmail, setContactEmail] = useState('')
+  const [contactPhone, setContactPhone] = useState('')
+  const [contactRefStyle, setContactRefStyle] = useState('email us at')
+  const [contactIncludeOn, setContactIncludeOn] = useState('negative_only')
+  const [signOff, setSignOff] = useState('')
   const router = useRouter()
   const searchParams = useSearchParams()
   const impersonateId = searchParams.get('impersonate')
@@ -75,6 +86,15 @@ function SettingsPage() {
         setAutoPublishStars(Array.isArray(p.auto_publish_stars) ? p.auto_publish_stars : [4, 5])
         setEmailNewReview(p.email_new_review !== false)
         setEmailWeeklySummary(p.email_weekly_summary !== false)
+        if (data.locations) setLocations(data.locations)
+        // Load AI prompt settings (contact details / sign-off)
+        if (data.aiSettings) {
+          setContactEmail(data.aiSettings.contact_email || '')
+          setContactPhone(data.aiSettings.contact_phone || '')
+          setContactRefStyle(data.aiSettings.contact_reference_style || 'email us at')
+          setContactIncludeOn(data.aiSettings.contact_include_on || 'negative_only')
+          setSignOff(data.aiSettings.sign_off || '')
+        }
       }
       setLoading(false)
     }
@@ -95,6 +115,18 @@ function SettingsPage() {
           auto_publish_stars: autoPublishStars,
           email_new_review: emailNewReview,
           email_weekly_summary: emailWeeklySummary,
+        }),
+      })
+      // Also save contact details to ai_prompt_settings
+      await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ai_contact_email: contactEmail || null,
+          ai_contact_phone: contactPhone || null,
+          ai_contact_reference_style: contactRefStyle,
+          ai_contact_include_on: contactIncludeOn,
+          ai_sign_off: signOff || null,
         }),
       })
       if (res.ok) {
@@ -151,6 +183,55 @@ function SettingsPage() {
       setProfile((prev) => (prev ? { ...prev, google_connected: false } : null))
     } catch {
       toast.error('Failed to disconnect')
+    }
+  }
+
+  const handleUpdateLocation = async (locId: string, field: string, value: string) => {
+    try {
+      await fetch('/api/locations', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: locId, [field]: value }),
+      })
+      setLocations((prev) =>
+        prev.map((l) => (l.id === locId ? { ...l, [field]: value } : l))
+      )
+    } catch {
+      toast.error('Failed to update location')
+    }
+  }
+
+  const handleRemoveLocation = async (locId: string) => {
+    try {
+      const res = await fetch(`/api/locations?id=${locId}`, { method: 'DELETE' })
+      if (res.ok) {
+        setLocations((prev) => prev.filter((l) => l.id !== locId))
+        toast.success('Location removed')
+      } else {
+        toast.error('Failed to remove location')
+      }
+    } catch {
+      toast.error('Failed to remove location')
+    }
+  }
+
+  const handleAddLocation = async () => {
+    try {
+      const res = await fetch('/api/locations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ location_name: 'New Location' }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setLocations((prev) => [...prev, data.location])
+        toast.success('Location added')
+      } else {
+        const data = await res.json()
+        toast.error(data.error || 'Failed to add location')
+      }
+    } catch {
+      toast.error('Failed to add location')
     }
   }
 
@@ -399,6 +480,108 @@ function SettingsPage() {
                 </button>
               </div>
             )}
+          </section>
+
+          {/* Locations */}
+          <section className="mb-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-gray-400" />
+                <h2 className="text-lg font-semibold text-gray-900">Locations</h2>
+              </div>
+              {locations.length < 3 && (
+                <button onClick={handleAddLocation} className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700">
+                  <Plus size={14} /> Add Location
+                </button>
+              )}
+            </div>
+            <p className="mb-4 text-sm text-gray-500">Manage up to 3 Google Business Profile locations. Each location can have its own contact person for notifications.</p>
+
+            {locations.length === 0 ? (
+              <p className="py-4 text-center text-sm text-gray-400">No locations added yet. Add your first location above.</p>
+            ) : (
+              <div className="space-y-4">
+                {locations.map((loc) => (
+                  <div key={loc.id} className="rounded-lg border border-gray-200 p-4">
+                    <div className="mb-3 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <MapPin size={14} className="text-emerald-500" />
+                        <span className="text-sm font-medium text-gray-900">{loc.location_name || 'Unnamed Location'}</span>
+                        {loc.is_primary && <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700">Primary</span>}
+                      </div>
+                      <button onClick={() => handleRemoveLocation(loc.id)} className="rounded-lg p-1 text-gray-400 hover:bg-red-50 hover:text-red-600"><Trash2 size={14} /></button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="mb-1 block text-xs text-gray-500">Location Name</label>
+                        <input type="text" defaultValue={loc.location_name || ''} onBlur={(e) => handleUpdateLocation(loc.id, 'location_name', e.target.value)} className="w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs text-gray-500">Address</label>
+                        <input type="text" defaultValue={loc.location_address || ''} onBlur={(e) => handleUpdateLocation(loc.id, 'location_address', e.target.value)} className="w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs text-gray-500">Contact Name</label>
+                        <input type="text" defaultValue={loc.contact_name || ''} onBlur={(e) => handleUpdateLocation(loc.id, 'contact_name', e.target.value)} className="w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="Site manager" />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs text-gray-500">Contact Email</label>
+                        <input type="email" defaultValue={loc.contact_email || ''} onBlur={(e) => handleUpdateLocation(loc.id, 'contact_email', e.target.value)} className="w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="manager@business.com" />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs text-gray-500">Contact Phone</label>
+                        <input type="text" defaultValue={loc.contact_phone || ''} onBlur={(e) => handleUpdateLocation(loc.id, 'contact_phone', e.target.value)} className="w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="Optional" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* Contact Details & Sign-off for AI Replies */}
+          <section className="mb-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            <div className="mb-4 flex items-center gap-2">
+              <AtSign className="h-5 w-5 text-gray-400" />
+              <h2 className="text-lg font-semibold text-gray-900">Contact Details for Replies</h2>
+            </div>
+            <p className="mb-4 text-sm text-gray-500">These details are included in AI-generated replies so customers know how to reach you.</p>
+
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-gray-700">Contact Email</label>
+                <input type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="hello@yourbusiness.com" />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-gray-700">Contact Phone <span className="text-gray-400">(optional)</span></label>
+                <input type="text" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="0400 123 456" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-gray-700">How to reference contact</label>
+                <select value={contactRefStyle} onChange={(e) => setContactRefStyle(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                  <option value="email us at">email us at</option>
+                  <option value="call us on">call us on</option>
+                  <option value="reach out to us at">reach out to us at</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-gray-700">Include contact on</label>
+                <select value={contactIncludeOn} onChange={(e) => setContactIncludeOn(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                  <option value="negative_only">Only on negative reviews (1-3 stars)</option>
+                  <option value="always">On all reviews</option>
+                  <option value="never">Never</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">Sign-off</label>
+              <input type="text" value={signOff} onChange={(e) => setSignOff(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder='e.g. "The team at Camden Car Wash"' />
+              <p className="mt-1 text-xs text-gray-400">Added to the end of every AI reply. Leave blank for no sign-off.</p>
+            </div>
           </section>
 
           {/* Subscription & Billing */}

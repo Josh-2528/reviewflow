@@ -36,10 +36,29 @@ export async function GET(request: NextRequest) {
       .eq('user_id', resolved.userId)
       .eq('status', 'published')
 
+    // Check if user has contact details configured
+    const adminClient = createAdminClient()
+    const { data: aiSettings } = await adminClient
+      .from('ai_prompt_settings')
+      .select('contact_email')
+      .eq('user_id', resolved.userId)
+
+    const hasContactDetails = (aiSettings || []).some(
+      (s) => s.contact_email && s.contact_email.trim() !== ''
+    )
+
+    // Check for locations
+    const { count: locationCount } = await adminClient
+      .from('locations')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', resolved.userId)
+
     return NextResponse.json({
       google_connected: profile?.google_connected ?? false,
+      has_locations: (locationCount ?? 0) > 0,
       has_reviewed_reply: (reviewedCount ?? 0) > 0,
       has_published_reply: (publishedCount ?? 0) > 0,
+      has_contact_details: hasContactDetails,
       email_notifications_on:
         (profile?.email_new_review ?? false) || (profile?.email_weekly_summary ?? false),
     })

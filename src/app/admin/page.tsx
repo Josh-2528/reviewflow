@@ -40,6 +40,7 @@ interface AdminUser {
   subscription_status: string | null
   created_at: string
   review_count: number
+  location_count: number
 }
 
 interface AdminStats {
@@ -335,8 +336,8 @@ export default function AdminPage() {
                 <table className="w-full min-w-[900px]">
                   <thead>
                     <tr className="border-b border-gray-100 bg-gray-50">
-                      {['User', 'Signed Up', 'Plan', 'Reviews', 'Google', 'Actions'].map((h, i) => (
-                        <th key={h} className={`px-5 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 ${i === 3 || i === 4 ? 'text-center' : i === 5 ? 'text-right' : 'text-left'}`}>{h}</th>
+                      {['User', 'Signed Up', 'Plan', 'Reviews', 'Locations', 'Google', 'Actions'].map((h, i) => (
+                        <th key={h} className={`px-5 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 ${i >= 3 && i <= 5 ? 'text-center' : i === 6 ? 'text-right' : 'text-left'}`}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -358,6 +359,7 @@ export default function AdminPage() {
                           </div>
                         </td>
                         <td className="px-5 py-4 text-center"><span className="text-sm font-medium text-gray-900">{user.review_count}</span></td>
+                        <td className="px-5 py-4 text-center"><span className="text-sm text-gray-600">{user.location_count || 0}</span></td>
                         <td className="px-5 py-4 text-center">
                           {user.google_connected
                             ? <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600"><Link2 size={12} />Connected</span>
@@ -382,7 +384,7 @@ export default function AdminPage() {
                       </tr>
                     ))}
                     {filteredUsers.length === 0 && (
-                      <tr><td colSpan={6} className="px-5 py-12 text-center text-sm text-gray-400">{search ? 'No users match your search' : 'No users yet'}</td></tr>
+                      <tr><td colSpan={7} className="px-5 py-12 text-center text-sm text-gray-400">{search ? 'No users match your search' : 'No users yet'}</td></tr>
                     )}
                   </tbody>
                 </table>

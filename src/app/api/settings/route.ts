@@ -33,6 +33,41 @@ export async function PUT(request: NextRequest) {
       'email_weekly_summary',
     ]
 
+    // Check for AI prompt setting fields (contact details, sign-off)
+    const aiFields: Record<string, string> = {
+      ai_contact_email: 'contact_email',
+      ai_contact_phone: 'contact_phone',
+      ai_contact_reference_style: 'contact_reference_style',
+      ai_contact_include_on: 'contact_include_on',
+      ai_sign_off: 'sign_off',
+    }
+
+    const aiUpdates: Record<string, unknown> = {}
+    for (const [bodyKey, dbKey] of Object.entries(aiFields)) {
+      if (bodyKey in body) {
+        aiUpdates[dbKey] = body[bodyKey]
+      }
+    }
+
+    const adminClient = createAdminClient()
+
+    // Save AI prompt settings if any
+    if (Object.keys(aiUpdates).length > 0) {
+      const { data: existing } = await adminClient
+        .from('ai_prompt_settings')
+        .select('id')
+        .eq('user_id', user.id)
+        .is('location_id', null)
+        .single()
+
+      if (existing) {
+        await adminClient.from('ai_prompt_settings').update(aiUpdates).eq('id', existing.id)
+      } else {
+        await adminClient.from('ai_prompt_settings').insert({ user_id: user.id, ...aiUpdates })
+      }
+    }
+
+    // Save user profile fields
     const updates: Record<string, unknown> = {}
     for (const field of allowedFields) {
       if (field in body) {
@@ -40,25 +75,19 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    if (Object.keys(updates).length === 0) {
-      return NextResponse.json(
-        { error: 'No valid fields to update' },
-        { status: 400 }
-      )
-    }
+    if (Object.keys(updates).length > 0) {
+      const { error: updateError } = await adminClient
+        .from('users')
+        .update(updates)
+        .eq('id', user.id)
 
-    const adminClient = createAdminClient()
-    const { error: updateError } = await adminClient
-      .from('users')
-      .update(updates)
-      .eq('id', user.id)
-
-    if (updateError) {
-      console.error('Settings update error:', updateError)
-      return NextResponse.json(
-        { error: 'Failed to update settings' },
-        { status: 500 }
-      )
+      if (updateError) {
+        console.error('Settings update error:', updateError)
+        return NextResponse.json(
+          { error: 'Failed to update settings' },
+          { status: 500 }
+        )
+      }
     }
 
     return NextResponse.json({ message: 'Settings updated' })
@@ -102,10 +131,28 @@ export async function GET(request: NextRequest) {
     const planStatus: PlanStatus = getUserPlanStatus(profile)
     const trialDaysRemaining = getTrialDaysRemaining(profile.trial_started_at)
 
+    // Fetch locations
+    const adminClient = createAdminClient()
+    const { data: locations } = await adminClient
+      .from('locations')
+      .select('*')
+      .eq('user_id', resolved.userId)
+      .order('created_at', { ascending: true })
+
+    // Fetch AI prompt settings (user's default = location_id is null)
+    const { data: aiSettings } = await adminClient
+      .from('ai_prompt_settings')
+      .select('contact_email, contact_phone, contact_reference_style, contact_include_on, sign_off')
+      .eq('user_id', resolved.userId)
+      .is('location_id', null)
+      .single()
+
     return NextResponse.json({
       profile: safeProfile,
       planStatus,
       trialDaysRemaining,
+      locations: locations || [],
+      aiSettings: aiSettings || null,
     })
   } catch (error) {
     console.error('Get settings error:', error)

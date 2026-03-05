@@ -34,13 +34,6 @@ export async function POST() {
       )
     }
 
-    if (!profile.google_connected || !profile.google_account_id || !profile.google_location_id) {
-      return NextResponse.json(
-        { error: 'Google Business Profile not connected' },
-        { status: 400 }
-      )
-    }
-
     // Check if user has full access (trial or pro)
     const userHasAccess = hasFullAccess(profile)
     if (!userHasAccess) {
@@ -50,20 +43,52 @@ export async function POST() {
       )
     }
 
-    // Fetch reviews from Google
-    let googleReviews
-    try {
-      const reviewsData = await fetchReviews(
-        user.id,
-        profile.google_account_id,
-        profile.google_location_id
-      )
-      googleReviews = reviewsData.reviews || []
-    } catch (error) {
-      console.error('Error fetching Google reviews:', error)
+    // Fetch user's locations
+    const { data: locations } = await adminClient
+      .from('locations')
+      .select('*')
+      .eq('user_id', user.id)
+
+    // Build list of sources to poll: locations first, then legacy user-level connection
+    interface PollSource {
+      googleAccountId: string
+      googleLocationId: string
+      locationId: string | null
+      locationName: string | null
+      contactEmail: string | null
+    }
+
+    const sources: PollSource[] = []
+
+    if (locations && locations.length > 0) {
+      for (const loc of locations) {
+        if (loc.google_account_id && loc.google_location_id) {
+          sources.push({
+            googleAccountId: loc.google_account_id,
+            googleLocationId: loc.google_location_id,
+            locationId: loc.id,
+            locationName: loc.location_name,
+            contactEmail: loc.contact_email,
+          })
+        }
+      }
+    }
+
+    // Fallback to legacy user-level connection if no locations configured
+    if (sources.length === 0 && profile.google_connected && profile.google_account_id && profile.google_location_id) {
+      sources.push({
+        googleAccountId: profile.google_account_id,
+        googleLocationId: profile.google_location_id,
+        locationId: null,
+        locationName: null,
+        contactEmail: null,
+      })
+    }
+
+    if (sources.length === 0) {
       return NextResponse.json(
-        { error: 'Failed to fetch reviews from Google. Please check your connection.' },
-        { status: 502 }
+        { error: 'No Google Business Profile connected' },
+        { status: 400 }
       )
     }
 
@@ -72,162 +97,96 @@ export async function POST() {
     const userCanAI = canGenerateAIReplies(profile)
     const userCanAutoPublish = canAutoPublish(profile)
 
-    for (const googleReview of googleReviews) {
-      const parsed = parseGoogleReview(googleReview)
-
-      // Check if review already exists
-      const { data: existing } = await adminClient
-        .from('reviews')
-        .select('id')
-        .eq('google_review_id', parsed.google_review_id)
-        .single()
-
-      if (existing) continue
-
-      // Save new review
-      const { data: savedReview, error: saveError } = await adminClient
-        .from('reviews')
-        .insert({
-          user_id: user.id,
-          ...parsed,
-          status: parsed.has_existing_reply ? 'published' : 'new',
-        })
-        .select()
-        .single()
-
-      if (saveError || !savedReview) {
-        errors.push(`Failed to save review ${parsed.google_review_id}`)
+    for (const source of sources) {
+      let googleReviews
+      try {
+        const reviewsData = await fetchReviews(
+          user.id,
+          source.googleAccountId,
+          source.googleLocationId
+        )
+        googleReviews = reviewsData.reviews || []
+      } catch (error) {
+        console.error(`Error fetching Google reviews for location ${source.locationId}:`, error)
+        errors.push(`Failed to fetch reviews for ${source.locationName || 'location'}`)
         continue
       }
 
-      newReviewCount++
+      for (const googleReview of googleReviews) {
+        const parsed = parseGoogleReview(googleReview)
 
-      // Log review detection
-      await adminClient.from('activity_log').insert({
-        user_id: user.id,
-        action: 'review_detected',
-        review_id: savedReview.id,
-        details: `New ${parsed.star_rating}-star review from ${parsed.reviewer_name}`,
-      })
-
-      // Send new review email notification
-      if (profile.email_new_review !== false) {
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-        sendNewReviewEmail({
-          to: profile.email,
-          businessName: profile.business_name || 'Your Business',
-          reviewerName: parsed.reviewer_name,
-          starRating: parsed.star_rating,
-          reviewText: parsed.review_text,
-          dashboardUrl: `${appUrl}/dashboard`,
-        }).catch((err) => console.error('Email send failed:', err))
-      }
-
-      // Skip reply generation for reviews that already have replies
-      if (parsed.has_existing_reply) continue
-
-      // AI replies require active trial or pro
-      if (!userCanAI) continue
-
-      // Generate AI reply
-      try {
-        const replyText = await generateReviewReply({
-          userId: user.id,
-          businessName: profile.business_name || 'Our Business',
-          businessLocation: profile.business_location || '',
-          tonePreference: profile.tone_preference || 'friendly and professional',
-          customInstructions: profile.custom_instructions,
-          starRating: parsed.star_rating,
-          reviewText: parsed.review_text,
-          reviewerName: parsed.reviewer_name,
-        })
-
-        // Save reply
-        await adminClient.from('replies').insert({
-          review_id: savedReview.id,
-          generated_text: replyText,
-          final_text: replyText,
-          status: 'pending',
-        })
-
-        // Update review status
-        await adminClient
+        // Check if review already exists
+        const { data: existing } = await adminClient
           .from('reviews')
-          .update({ status: 'reply_generated' })
-          .eq('id', savedReview.id)
+          .select('id')
+          .eq('google_review_id', parsed.google_review_id)
+          .single()
 
-        // Log reply generation
+        if (existing) continue
+
+        // Save new review
+        const { data: savedReview, error: saveError } = await adminClient
+          .from('reviews')
+          .insert({
+            user_id: user.id,
+            location_id: source.locationId,
+            ...parsed,
+            status: parsed.has_existing_reply ? 'published' : 'new',
+          })
+          .select()
+          .single()
+
+        if (saveError || !savedReview) {
+          errors.push(`Failed to save review ${parsed.google_review_id}`)
+          continue
+        }
+
+        newReviewCount++
+
+        // Log review detection
         await adminClient.from('activity_log').insert({
           user_id: user.id,
-          action: 'reply_generated',
+          action: 'review_detected',
           review_id: savedReview.id,
-          details: `AI reply generated for ${parsed.reviewer_name}'s review`,
+          location_id: source.locationId,
+          details: `New ${parsed.star_rating}-star review from ${parsed.reviewer_name}${source.locationName ? ` at ${source.locationName}` : ''}`,
         })
 
-        // Smart auto-publish: check if this star rating is in the auto-publish list
-        const autoPublishStars: number[] = Array.isArray(profile.auto_publish_stars)
-          ? profile.auto_publish_stars
-          : [4, 5]
-        const shouldAutoPublish = userCanAutoPublish && autoPublishStars.includes(parsed.star_rating)
-
-        if (shouldAutoPublish) {
-          try {
-            await postReply(
-              user.id,
-              profile.google_account_id,
-              profile.google_location_id,
-              parsed.google_review_id,
-              replyText
-            )
-
-            await adminClient
-              .from('replies')
-              .update({
-                status: 'published',
-                auto_published: true,
-                published_at: new Date().toISOString(),
-              })
-              .eq('review_id', savedReview.id)
-
-            await adminClient
-              .from('reviews')
-              .update({ status: 'published' })
-              .eq('id', savedReview.id)
-
-            await adminClient.from('activity_log').insert({
-              user_id: user.id,
-              action: 'reply_published',
-              review_id: savedReview.id,
-              details: `Reply auto-published for ${parsed.reviewer_name}'s review`,
-            })
-          } catch (publishError) {
-            console.error('Auto-publish failed:', publishError)
-            await adminClient
-              .from('replies')
-              .update({ status: 'approved' })
-              .eq('review_id', savedReview.id)
-
-            await adminClient
-              .from('reviews')
-              .update({ status: 'approved' })
-              .eq('id', savedReview.id)
-          }
+        // Send new review email notification
+        const emailTo = source.contactEmail || (profile.email_new_review !== false ? profile.email : null)
+        if (emailTo) {
+          const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+          sendNewReviewEmail({
+            to: emailTo,
+            businessName: source.locationName || profile.business_name || 'Your Business',
+            reviewerName: parsed.reviewer_name,
+            starRating: parsed.star_rating,
+            reviewText: parsed.review_text,
+            dashboardUrl: `${appUrl}/dashboard`,
+          }).catch((err) => console.error('Email send failed:', err))
         }
-      } catch (aiError) {
-        console.error('AI reply generation failed:', aiError)
-        // Retry once
+
+        // Skip reply generation for reviews that already have replies
+        if (parsed.has_existing_reply) continue
+
+        // AI replies require active trial or pro
+        if (!userCanAI) continue
+
+        // Generate AI reply
         try {
           const replyText = await generateReviewReply({
             userId: user.id,
-            businessName: profile.business_name || 'Our Business',
+            businessName: source.locationName || profile.business_name || 'Our Business',
             businessLocation: profile.business_location || '',
             tonePreference: profile.tone_preference || 'friendly and professional',
             customInstructions: profile.custom_instructions,
             starRating: parsed.star_rating,
             reviewText: parsed.review_text,
             reviewerName: parsed.reviewer_name,
+            locationId: source.locationId,
           })
 
+          // Save reply
           await adminClient.from('replies').insert({
             review_id: savedReview.id,
             generated_text: replyText,
@@ -235,12 +194,101 @@ export async function POST() {
             status: 'pending',
           })
 
+          // Update review status
           await adminClient
             .from('reviews')
             .update({ status: 'reply_generated' })
             .eq('id', savedReview.id)
-        } catch {
-          errors.push(`AI failed for review ${parsed.google_review_id}`)
+
+          // Log reply generation
+          await adminClient.from('activity_log').insert({
+            user_id: user.id,
+            action: 'reply_generated',
+            review_id: savedReview.id,
+            location_id: source.locationId,
+            details: `AI reply generated for ${parsed.reviewer_name}'s review`,
+          })
+
+          // Smart auto-publish
+          const autoPublishStars: number[] = Array.isArray(profile.auto_publish_stars)
+            ? profile.auto_publish_stars
+            : [4, 5]
+          const shouldAutoPublish = userCanAutoPublish && autoPublishStars.includes(parsed.star_rating)
+
+          if (shouldAutoPublish) {
+            try {
+              await postReply(
+                user.id,
+                source.googleAccountId,
+                source.googleLocationId,
+                parsed.google_review_id,
+                replyText
+              )
+
+              await adminClient
+                .from('replies')
+                .update({
+                  status: 'published',
+                  auto_published: true,
+                  published_at: new Date().toISOString(),
+                })
+                .eq('review_id', savedReview.id)
+
+              await adminClient
+                .from('reviews')
+                .update({ status: 'published' })
+                .eq('id', savedReview.id)
+
+              await adminClient.from('activity_log').insert({
+                user_id: user.id,
+                action: 'reply_published',
+                review_id: savedReview.id,
+                location_id: source.locationId,
+                details: `Reply auto-published for ${parsed.reviewer_name}'s review`,
+              })
+            } catch (publishError) {
+              console.error('Auto-publish failed:', publishError)
+              await adminClient
+                .from('replies')
+                .update({ status: 'approved' })
+                .eq('review_id', savedReview.id)
+
+              await adminClient
+                .from('reviews')
+                .update({ status: 'approved' })
+                .eq('id', savedReview.id)
+            }
+          }
+        } catch (aiError) {
+          console.error('AI reply generation failed:', aiError)
+          // Retry once
+          try {
+            const replyText = await generateReviewReply({
+              userId: user.id,
+              businessName: source.locationName || profile.business_name || 'Our Business',
+              businessLocation: profile.business_location || '',
+              tonePreference: profile.tone_preference || 'friendly and professional',
+              customInstructions: profile.custom_instructions,
+              starRating: parsed.star_rating,
+              reviewText: parsed.review_text,
+              reviewerName: parsed.reviewer_name,
+              locationId: source.locationId,
+            })
+
+            await adminClient.from('replies').insert({
+              review_id: savedReview.id,
+              generated_text: replyText,
+              final_text: replyText,
+              status: 'pending',
+            })
+
+            await adminClient
+              .from('reviews')
+              .update({ status: 'reply_generated' })
+              .eq('id', savedReview.id)
+          } catch {
+            errors.push(`AI failed for review ${parsed.google_review_id}`)
+          }
         }
       }
     }

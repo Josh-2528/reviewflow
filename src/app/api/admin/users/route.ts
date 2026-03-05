@@ -53,10 +53,24 @@ export async function GET() {
       }
     }
 
+    // Get location counts per user
+    const { data: locationCounts } = await adminClient
+      .from('locations')
+      .select('user_id')
+      .in('user_id', userIds)
+
+    const locCountMap: Record<string, number> = {}
+    if (locationCounts) {
+      for (const l of locationCounts) {
+        locCountMap[l.user_id] = (locCountMap[l.user_id] || 0) + 1
+      }
+    }
+
     // Build enriched user list
     const enrichedUsers = users.map((u) => ({
       ...u,
       review_count: countMap[u.id] || 0,
+      location_count: locCountMap[u.id] || 0,
     }))
 
     // Summary stats

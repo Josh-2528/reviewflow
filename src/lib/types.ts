@@ -25,6 +25,20 @@ export interface User {
   updated_at: string
 }
 
+export interface Location {
+  id: string
+  user_id: string
+  google_account_id: string | null
+  google_location_id: string | null
+  location_name: string | null
+  location_address: string | null
+  contact_name: string | null
+  contact_email: string | null
+  contact_phone: string | null
+  is_primary: boolean
+  created_at: string
+}
+
 export interface Review {
   id: string
   user_id: string
@@ -37,8 +51,10 @@ export interface Review {
   has_existing_reply: boolean
   status: 'new' | 'reply_generated' | 'approved' | 'published' | 'skipped'
   test_review: boolean
+  location_id: string | null
   created_at: string
   reply?: Reply
+  location?: Location
 }
 
 export interface Reply {
@@ -64,9 +80,11 @@ export interface ActivityLogEntry {
     | 'reply_edited'
     | 'reply_rejected'
   review_id: string | null
+  location_id: string | null
   details: string | null
   created_at: string
   review?: Review
+  location?: Location
 }
 
 export interface DashboardStats {
@@ -85,6 +103,7 @@ export interface BrandingSettings {
 export interface AIPromptSettings {
   id: string
   user_id: string | null
+  location_id: string | null
   base_system_prompt: string | null
   star_1_instructions: string | null
   star_2_instructions: string | null
@@ -110,5 +129,6 @@ export interface OnboardingProgress {
   google_connected: boolean
   has_reviewed_reply: boolean
   has_published_reply: boolean
+  has_contact_details: boolean
   email_notifications_on: boolean
 }

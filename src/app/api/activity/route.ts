@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
 
     const { data: activities, error } = await db
       .from('activity_log')
-      .select('*, review:reviews(reviewer_name, star_rating, review_text)')
+      .select('*, review:reviews(reviewer_name, star_rating, review_text, location_id), location:locations(id, location_name)')
       .eq('user_id', resolved.userId)
       .order('created_at', { ascending: false })
       .limit(100)
@@ -29,7 +29,13 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    return NextResponse.json({ activities })
+    // Normalize location joins
+    const formatted = (activities || []).map((a) => ({
+      ...a,
+      location: Array.isArray(a.location) ? a.location[0] || null : a.location,
+    }))
+
+    return NextResponse.json({ activities: formatted })
   } catch (error) {
     console.error('Activity API error:', error)
     return NextResponse.json(
