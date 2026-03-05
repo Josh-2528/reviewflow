@@ -105,9 +105,9 @@ export default function LandingPage() {
               </h1>
 
               <p className="mt-6 max-w-lg text-lg leading-relaxed text-gray-400">
-                The AI review manager that monitors your Google reviews 24/7, writes
-                human-sounding replies in your brand voice, and publishes them with
-                one click — so you never lose a customer over an unanswered review.
+                ReviewFlow monitors your Google reviews 24/7, writes human-sounding
+                replies in your brand voice, and publishes them automatically — so no
+                review goes unanswered.
               </p>
 
               <div className="mt-10 flex flex-col gap-4 sm:flex-row">
