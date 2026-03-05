@@ -10,7 +10,24 @@ function getResend(): Resend {
   return _resend
 }
 
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'ReviewFlow <notifications@reviewflow.app>'
+function getFromEmail(): string {
+  const raw = process.env.RESEND_FROM_EMAIL
+  console.log('[Email] Raw RESEND_FROM_EMAIL env var:', JSON.stringify(raw))
+  if (raw && raw.includes('@')) {
+    return raw
+  }
+  return 'ReviewFlow <onboarding@resend.dev>'
+}
+
+function getDashboardUrl(): string {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL
+  console.log('[Email] Raw NEXT_PUBLIC_APP_URL env var:', JSON.stringify(appUrl))
+  if (appUrl && !appUrl.includes('localhost')) {
+    return `${appUrl}/dashboard`
+  }
+  // Production fallback
+  return 'https://reviewflow-orcin.vercel.app/dashboard'
+}
 
 // ── Branding helper ──────────────────────────────────────────────────
 
@@ -66,12 +83,16 @@ interface NewReviewEmailParams {
   reviewerName: string
   starRating: number
   reviewText: string | null
-  dashboardUrl: string
+  dashboardUrl?: string
 }
 
 export async function sendNewReviewEmail(params: NewReviewEmailParams) {
-  const { to, businessName, locationName, reviewerName, starRating, reviewText, dashboardUrl } = params
+  const { to, businessName, locationName, reviewerName, starRating, reviewText } = params
   const branding = await getBranding()
+  const fromEmail = getFromEmail()
+  const dashboardUrl = params.dashboardUrl && !params.dashboardUrl.includes('localhost')
+    ? params.dashboardUrl
+    : getDashboardUrl()
 
   const displayName = locationName || businessName
 
@@ -81,11 +102,11 @@ export async function sendNewReviewEmail(params: NewReviewEmailParams) {
 
   const subject = `New ${starRating}-Star Review at ${displayName}`
 
-  console.log('[Email] sendNewReviewEmail called:', { to, from: FROM_EMAIL, subject })
+  console.log('[Email] sendNewReviewEmail called:', { to, from: fromEmail, subject, dashboardUrl })
 
   try {
     await getResend().emails.send({
-      from: FROM_EMAIL,
+      from: fromEmail,
       to,
       subject,
       html: `
@@ -135,7 +156,7 @@ interface WeeklySummaryParams {
   averageRating: number
   repliesPublished: number
   newReviewBreakdown: { stars: number; count: number }[]
-  dashboardUrl: string
+  dashboardUrl?: string
 }
 
 export async function sendWeeklySummaryEmail(params: WeeklySummaryParams) {
@@ -146,10 +167,13 @@ export async function sendWeeklySummaryEmail(params: WeeklySummaryParams) {
     averageRating,
     repliesPublished,
     newReviewBreakdown,
-    dashboardUrl,
   } = params
 
   const branding = await getBranding()
+  const fromEmail = getFromEmail()
+  const dashboardUrl = params.dashboardUrl && !params.dashboardUrl.includes('localhost')
+    ? params.dashboardUrl
+    : getDashboardUrl()
 
   const breakdownRows = newReviewBreakdown
     .filter((b) => b.count > 0)
@@ -167,7 +191,7 @@ export async function sendWeeklySummaryEmail(params: WeeklySummaryParams) {
 
   try {
     await getResend().emails.send({
-      from: FROM_EMAIL,
+      from: fromEmail,
       to,
       subject: `Weekly Review Summary — ${businessName}`,
       html: `
