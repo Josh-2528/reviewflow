@@ -185,7 +185,7 @@ function ActivityPage() {
                 return (
                   <div
                     key={activity.id}
-                    className={`flex items-start gap-4 px-5 py-4 ${
+                    className={`flex items-start gap-3 px-4 py-4 sm:gap-4 sm:px-5 ${
                       index < activities.length - 1 ? 'border-b border-gray-100' : ''
                     }`}
                   >

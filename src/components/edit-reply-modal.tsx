@@ -27,21 +27,21 @@ export function EditReplyModal({ review, onClose, onSave }: EditReplyModalProps)
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-lg rounded-xl bg-white shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center sm:p-4">
+      <div className="flex max-h-[90vh] w-full flex-col rounded-t-xl bg-white shadow-2xl sm:max-h-none sm:max-w-lg sm:rounded-xl">
         {/* Header */}
-        <div className="flex items-center justify-between border-b px-6 py-4">
+        <div className="flex items-center justify-between border-b px-4 py-4 sm:px-6">
           <h2 className="text-lg font-semibold text-gray-900">Edit Reply</h2>
           <button
             onClick={onClose}
-            className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+            className="flex h-11 w-11 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600"
           >
             <X size={20} />
           </button>
         </div>
 
         {/* Original Review */}
-        <div className="border-b px-6 py-4">
+        <div className="border-b px-4 py-4 sm:px-6">
           <div className="mb-2 flex items-center gap-2">
             <StarRating rating={review.star_rating} size={14} />
             <span className="text-sm font-medium text-gray-700">
@@ -57,7 +57,7 @@ export function EditReplyModal({ review, onClose, onSave }: EditReplyModalProps)
         </div>
 
         {/* Edit Area */}
-        <div className="px-6 py-4">
+        <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6">
           <label className="mb-2 block text-sm font-medium text-gray-700">
             Your Reply
           </label>
@@ -71,17 +71,17 @@ export function EditReplyModal({ review, onClose, onSave }: EditReplyModalProps)
         </div>
 
         {/* Actions */}
-        <div className="flex justify-end gap-3 border-t px-6 py-4">
+        <div className="flex justify-end gap-3 border-t px-4 py-4 sm:px-6">
           <button
             onClick={onClose}
-            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            className="min-h-[44px] rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={saving || !text.trim()}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            className="min-h-[44px] rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
           >
             {saving ? 'Publishing...' : 'Save & Publish'}
           </button>

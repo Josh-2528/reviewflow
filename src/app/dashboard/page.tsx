@@ -257,9 +257,9 @@ function DashboardPage() {
         {/* Demo Banner */}
         {isDemo && (
           <div className="border-b border-amber-200 bg-amber-50 px-4 py-3">
-            <div className="mx-auto flex max-w-4xl items-center justify-between">
+            <div className="mx-auto flex max-w-4xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-amber-800">👀 You&apos;re viewing a demo. Start your free trial to connect your own Google reviews.</p>
-              <Link href="/signup" className="shrink-0 rounded-lg bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-emerald-700">Start Free Trial →</Link>
+              <Link href="/signup" className="shrink-0 rounded-lg bg-emerald-600 px-4 py-1.5 text-center text-sm font-medium text-white hover:bg-emerald-700">Start Free Trial →</Link>
             </div>
           </div>
         )}
@@ -267,9 +267,9 @@ function DashboardPage() {
         {/* Trial Banner */}
         {!isDemo && planStatus === 'trial' && (
           <div className="border-b border-emerald-200 bg-emerald-50 px-4 py-3">
-            <div className="mx-auto flex max-w-4xl items-center justify-between">
+            <div className="mx-auto flex max-w-4xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-emerald-800">You are on your 14-day free trial. <strong>{trialDaysRemaining} day{trialDaysRemaining !== 1 ? 's' : ''} remaining.</strong></p>
-              <Link href="/pricing" className="shrink-0 rounded-lg bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-emerald-700">Subscribe Now</Link>
+              <Link href="/pricing" className="shrink-0 rounded-lg bg-emerald-600 px-4 py-1.5 text-center text-sm font-medium text-white hover:bg-emerald-700">Subscribe Now</Link>
             </div>
           </div>
         )}
@@ -277,30 +277,31 @@ function DashboardPage() {
         {/* Expired Trial Wall */}
         {!isDemo && planStatus === 'expired' && (
           <div className="border-b border-red-200 bg-red-50 px-4 py-4">
-            <div className="mx-auto flex max-w-4xl items-center justify-between">
+            <div className="mx-auto flex max-w-4xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
-                <AlertTriangle className="h-5 w-5 text-red-600" />
+                <AlertTriangle className="h-5 w-5 shrink-0 text-red-600" />
                 <div>
                   <p className="text-sm font-medium text-red-800">Your trial has ended.</p>
                   <p className="text-sm text-red-700">Subscribe to continue managing your reviews. AI replies, polling, and publishing are disabled.</p>
                 </div>
               </div>
-              <Link href="/pricing" className="shrink-0 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">Subscribe Now</Link>
+              <Link href="/pricing" className="shrink-0 rounded-lg bg-red-600 px-4 py-2 text-center text-sm font-medium text-white hover:bg-red-700">Subscribe Now</Link>
             </div>
           </div>
         )}
 
         <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
           {/* Page header */}
-          <div className="mb-6 flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+          <div className="mb-6 flex items-center justify-between gap-3">
+            <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">Dashboard</h1>
             <button
               onClick={handleRefresh}
               disabled={refreshing || planStatus === 'expired'}
-              className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50"
+              className="flex shrink-0 items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 sm:px-4"
             >
               <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
-              {refreshing ? 'Refreshing...' : 'Refresh Reviews'}
+              <span className="hidden sm:inline">{refreshing ? 'Refreshing...' : 'Refresh Reviews'}</span>
+              <span className="sm:hidden">{refreshing ? '...' : 'Refresh'}</span>
             </button>
           </div>
 
@@ -366,20 +367,22 @@ function DashboardPage() {
           </div>
 
           {/* Filter Tabs */}
-          <div className="mb-6 flex gap-1 rounded-lg border border-gray-200 bg-white p-1">
-            {filterTabs.map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setFilter(tab.key)}
-                className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                  filter === tab.key
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
+          <div className="-mx-4 mb-6 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+            <div className="flex gap-1 rounded-lg border border-gray-200 bg-white p-1">
+              {filterTabs.map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => setFilter(tab.key)}
+                  className={`flex-1 whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                    filter === tab.key
+                      ? 'bg-blue-600 text-white'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Reviews List */}
@@ -472,25 +475,25 @@ function ReviewCard({
   return (
     <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
       {/* Review Header */}
-      <div className="p-5">
-        <div className="flex items-start justify-between">
+      <div className="p-4 sm:p-5">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-center gap-3">
             {review.reviewer_photo_url ? (
-              <img src={review.reviewer_photo_url} alt={review.reviewer_name} className="h-10 w-10 rounded-full" />
+              <img src={review.reviewer_photo_url} alt={review.reviewer_name} className="h-10 w-10 shrink-0 rounded-full" />
             ) : (
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-sm font-medium text-gray-500">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-100 text-sm font-medium text-gray-500">
                 {review.reviewer_name.charAt(0).toUpperCase()}
               </div>
             )}
-            <div>
-              <p className="font-medium text-gray-900">{review.reviewer_name}</p>
+            <div className="min-w-0">
+              <p className="truncate font-medium text-gray-900">{review.reviewer_name}</p>
               <div className="mt-0.5 flex items-center gap-2">
                 <StarRating rating={review.star_rating} size={14} />
                 <span className="text-xs text-gray-400">{format(new Date(review.review_created_at), 'MMM d, yyyy')}</span>
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 pl-[52px] sm:pl-0">
             {showLocation && locationName && (
               <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-600">
                 <MapPin size={10} />
@@ -513,10 +516,10 @@ function ReviewCard({
 
       {/* Reply Section */}
       {review.reply && review.status === 'reply_generated' && (
-        <div className="border-t border-gray-100 bg-blue-50/50 p-5">
+        <div className="border-t border-gray-100 bg-blue-50/50 p-4 sm:p-5">
           <p className="mb-1 text-xs font-medium uppercase tracking-wide text-blue-600">AI Draft Reply</p>
           <p className="mb-4 text-sm leading-relaxed text-gray-700">{review.reply.final_text}</p>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {actionsDisabled ? (
               <div className="flex items-center gap-2 text-sm text-gray-500">
                 <Lock size={14} />
@@ -524,16 +527,16 @@ function ReviewCard({
               </div>
             ) : (
               <>
-                <button onClick={handleApprove} disabled={approving} className="flex items-center gap-1.5 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50">
+                <button onClick={handleApprove} disabled={approving} className="flex min-h-[44px] items-center gap-1.5 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50">
                   <Check size={14} />{approving ? 'Publishing...' : 'Approve'}
                 </button>
-                <button onClick={onEdit} className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+                <button onClick={onEdit} className="flex min-h-[44px] items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
                   <Pencil size={14} />Edit
                 </button>
-                <button onClick={handleRegenerate} disabled={regenerating} className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50">
+                <button onClick={handleRegenerate} disabled={regenerating} className="flex min-h-[44px] items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 sm:px-4">
                   <RefreshCw size={14} className={regenerating ? 'animate-spin' : ''} />{regenerating ? 'Regenerating...' : 'Regenerate'}
                 </button>
-                <button onClick={handleSkip} disabled={skipping} className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50">
+                <button onClick={handleSkip} disabled={skipping} className="flex min-h-[44px] items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50">
                   <X size={14} />Skip
                 </button>
               </>
@@ -544,8 +547,8 @@ function ReviewCard({
 
       {/* Published reply */}
       {review.reply && review.status === 'published' && (
-        <div className="border-t border-gray-100 bg-green-50/50 p-5">
-          <div className="mb-1 flex items-center gap-2">
+        <div className="border-t border-gray-100 bg-green-50/50 p-4 sm:p-5">
+          <div className="mb-1 flex flex-wrap items-center gap-2">
             <p className="text-xs font-medium uppercase tracking-wide text-green-600">Published Reply</p>
             {review.reply.auto_published && (
               <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-700">Auto-published</span>

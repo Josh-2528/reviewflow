@@ -15,6 +15,8 @@ import {
   Phone,
   Eye,
   Quote,
+  Menu,
+  X,
 } from 'lucide-react'
 import { useBranding } from '@/components/branding-provider'
 
@@ -22,6 +24,7 @@ const NAVY = '#0f1729'
 
 export default function LandingPage() {
   const { app_name, logo_url } = useBranding()
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   return (
     <div className="min-h-screen bg-white" style={{ fontFamily: "'Inter', sans-serif" }}>
@@ -45,17 +48,42 @@ export default function LandingPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <Link href="/login" className="hidden text-sm font-medium text-gray-300 transition-colors hover:text-white sm:block">
+            <Link href="/login" className="hidden text-sm font-medium text-gray-300 transition-colors hover:text-white md:block">
               Login
             </Link>
             <Link
               href="/signup"
-              className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-600"
+              className="hidden rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-600 md:inline-flex"
             >
               Start Free Trial
             </Link>
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="flex h-11 w-11 items-center justify-center rounded-lg text-gray-300 hover:bg-white/10 hover:text-white md:hidden"
+              aria-label="Toggle menu"
+            >
+              {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+            </button>
           </div>
         </div>
+
+        {/* Mobile dropdown menu */}
+        {mobileMenuOpen && (
+          <div className="border-t border-white/10 bg-[#0f1729] px-6 pb-6 pt-4 md:hidden">
+            <div className="flex flex-col gap-1">
+              <a href="#features" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-4 py-3 text-sm font-medium text-gray-300 hover:bg-white/10 hover:text-white">Features</a>
+              <a href="#pricing" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-4 py-3 text-sm font-medium text-gray-300 hover:bg-white/10 hover:text-white">Pricing</a>
+              <a href="#faq" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-4 py-3 text-sm font-medium text-gray-300 hover:bg-white/10 hover:text-white">FAQ</a>
+              <a href="https://carwashai.com.au" target="_blank" rel="noopener noreferrer" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-4 py-3 text-sm font-medium text-gray-300 hover:bg-white/10 hover:text-white">WashBot</a>
+              <Link href="/login" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-4 py-3 text-sm font-medium text-gray-300 hover:bg-white/10 hover:text-white">Login</Link>
+              <div className="mt-2 border-t border-white/10 pt-3">
+                <Link href="/signup" onClick={() => setMobileMenuOpen(false)} className="flex w-full items-center justify-center rounded-lg bg-emerald-500 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-600">
+                  Start Free Trial
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* ─── Hero (dark navy) ───────────────────────────────── */}

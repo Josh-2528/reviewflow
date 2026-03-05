@@ -344,7 +344,7 @@ function SettingsPage() {
           <h1 className="mb-8 text-2xl font-bold text-gray-900">Settings</h1>
 
           {/* Business Settings */}
-          <section className="mb-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+          <section className="mb-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
             <h2 className="mb-4 text-lg font-semibold text-gray-900">Business</h2>
 
             <div className="mb-4">
@@ -373,7 +373,7 @@ function SettingsPage() {
           </section>
 
           {/* Reply Settings */}
-          <section className="mb-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+          <section className="mb-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
             <h2 className="mb-4 text-lg font-semibold text-gray-900">Reply Settings</h2>
 
             <div className="mb-4">
@@ -446,7 +446,7 @@ function SettingsPage() {
           </section>
 
           {/* Google Connection */}
-          <section className="mb-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+          <section className="mb-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
             <h2 className="mb-4 text-lg font-semibold text-gray-900">
               Google Business Profile
             </h2>
@@ -483,7 +483,7 @@ function SettingsPage() {
           </section>
 
           {/* Locations */}
-          <section className="mb-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+          <section className="mb-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
             <div className="mb-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <MapPin className="h-5 w-5 text-gray-400" />
@@ -511,7 +511,7 @@ function SettingsPage() {
                       </div>
                       <button onClick={() => handleRemoveLocation(loc.id)} className="rounded-lg p-1 text-gray-400 hover:bg-red-50 hover:text-red-600"><Trash2 size={14} /></button>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <div>
                         <label className="mb-1 block text-xs text-gray-500">Location Name</label>
                         <input type="text" defaultValue={loc.location_name || ''} onBlur={(e) => handleUpdateLocation(loc.id, 'location_name', e.target.value)} className="w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
@@ -540,14 +540,14 @@ function SettingsPage() {
           </section>
 
           {/* Contact Details & Sign-off for AI Replies */}
-          <section className="mb-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+          <section className="mb-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
             <div className="mb-4 flex items-center gap-2">
               <AtSign className="h-5 w-5 text-gray-400" />
               <h2 className="text-lg font-semibold text-gray-900">Contact Details for Replies</h2>
             </div>
             <p className="mb-4 text-sm text-gray-500">These details are included in AI-generated replies so customers know how to reach you.</p>
 
-            <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="grid grid-cols-1 gap-4 mb-4 sm:grid-cols-2">
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-gray-700">Contact Email</label>
                 <input type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="hello@yourbusiness.com" />
@@ -558,7 +558,7 @@ function SettingsPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="grid grid-cols-1 gap-4 mb-4 sm:grid-cols-2">
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-gray-700">How to reference contact</label>
                 <select value={contactRefStyle} onChange={(e) => setContactRefStyle(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
@@ -585,7 +585,7 @@ function SettingsPage() {
           </section>
 
           {/* Subscription & Billing */}
-          <section className="mb-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+          <section className="mb-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
             <h2 className="mb-4 text-lg font-semibold text-gray-900">
               Subscription & Billing
             </h2>
@@ -623,7 +623,7 @@ function SettingsPage() {
               </p>
             )}
 
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-3">
               {planStatus !== 'pro' && (
                 <button
                   onClick={handleSubscribe}
@@ -646,7 +646,7 @@ function SettingsPage() {
           </section>
 
           {/* Email Notifications */}
-          <section className="mb-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+          <section className="mb-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
             <div className="mb-4 flex items-center gap-2">
               <Mail className="h-5 w-5 text-gray-400" />
               <h2 className="text-lg font-semibold text-gray-900">Email Notifications</h2>
@@ -698,7 +698,7 @@ function SettingsPage() {
           </section>
 
           {/* Account */}
-          <section className="mb-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+          <section className="mb-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
             <h2 className="mb-4 text-lg font-semibold text-gray-900">Account</h2>
             <div>
               <label className="mb-1.5 block text-sm font-medium text-gray-700">

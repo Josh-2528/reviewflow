@@ -303,11 +303,11 @@ export default function AdminPage() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="sticky top-0 z-30 border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-4">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
+          <div className="flex items-center gap-3 sm:gap-4">
             <Link href="/dashboard" className="text-gray-400 hover:text-gray-600"><ArrowLeft size={20} /></Link>
             <div className="flex items-center gap-2">
-              <AppLogo />
+              <AppLogo size="small" />
               <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">Admin</span>
             </div>
           </div>
@@ -315,7 +315,7 @@ export default function AdminPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-6 py-8">
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
         {/* Stats */}
         {stats && (
           <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -326,12 +326,14 @@ export default function AdminPage() {
         )}
 
         {/* Tab bar */}
-        <div className="mb-6 flex gap-1 rounded-lg border border-gray-200 bg-white p-1">
-          {([['users', Users, 'Users'], ['ai-prompts', Sparkles, 'AI Prompts'], ['branding', Palette, 'Branding']] as const).map(([key, Icon, label]) => (
-            <button key={key} onClick={() => setActiveTab(key as AdminTab)} className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors ${activeTab === key ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
-              <Icon size={16} />{label}
-            </button>
-          ))}
+        <div className="-mx-4 mb-6 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+          <div className="flex gap-1 rounded-lg border border-gray-200 bg-white p-1">
+            {([['users', Users, 'Users'], ['ai-prompts', Sparkles, 'AI Prompts'], ['branding', Palette, 'Branding']] as const).map(([key, Icon, label]) => (
+              <button key={key} onClick={() => setActiveTab(key as AdminTab)} className={`flex shrink-0 items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors ${activeTab === key ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+                <Icon size={16} />{label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* ═══════════════ USERS TAB ═══════════════ */}
@@ -502,19 +504,19 @@ export default function AdminPage() {
 
       {/* ═══════════════ CUSTOMER AI CONFIG MODAL ═══════════════ */}
       {configUser && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 pt-12">
-          <div className="relative w-full max-w-3xl rounded-2xl bg-white shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-0 sm:p-4 sm:pt-12">
+          <div className="relative flex min-h-full w-full flex-col bg-white sm:min-h-0 sm:max-w-3xl sm:rounded-2xl sm:shadow-2xl">
             {/* Modal header */}
-            <div className="flex items-center justify-between border-b px-6 py-4">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">Configure AI — {configUser.business_name || configUser.email}</h2>
+            <div className="flex items-start justify-between border-b px-4 py-4 sm:px-6">
+              <div className="min-w-0 pr-2">
+                <h2 className="truncate text-lg font-semibold text-gray-900">Configure AI — {configUser.business_name || configUser.email}</h2>
                 <p className="text-sm text-gray-500">Customer-specific overrides. Blank fields fall back to global defaults.</p>
               </div>
-              <button onClick={() => setConfigUser(null)} className="rounded-lg p-2 text-gray-400 hover:bg-gray-100"><X size={20} /></button>
+              <button onClick={() => setConfigUser(null)} className="shrink-0 rounded-lg p-2 text-gray-400 hover:bg-gray-100"><X size={20} /></button>
             </div>
 
             {/* Modal body */}
-            <div className="max-h-[calc(100vh-200px)] overflow-y-auto px-6 py-6">
+            <div className="flex-1 overflow-y-auto px-4 py-6 sm:max-h-[calc(100vh-200px)] sm:px-6">
               {/* Business Context */}
               <Section title="Business Context" description="Specific details the AI should know about this business.">
                 <textarea value={customerAI.business_context || ''} onChange={(e) => setCustomerAI({ ...customerAI, business_context: e.target.value })} rows={4} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder='e.g. "Self-serve car wash with 8 bays. Touch-free and manual options..."' />
@@ -527,7 +529,7 @@ export default function AdminPage() {
 
               {/* Contact Details */}
               <Section title="Contact Details for Replies" description="How the AI should direct unhappy customers.">
-                <div className="grid grid-cols-2 gap-4 mb-3">
+                <div className="grid grid-cols-1 gap-4 mb-3 sm:grid-cols-2">
                   <div>
                     <label className="mb-1 block text-sm text-gray-600">Contact Email</label>
                     <input type="email" value={customerAI.contact_email || ''} onChange={(e) => setCustomerAI({ ...customerAI, contact_email: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="camden@gmail.com" />
@@ -537,7 +539,7 @@ export default function AdminPage() {
                     <input type="text" value={customerAI.contact_phone || ''} onChange={(e) => setCustomerAI({ ...customerAI, contact_phone: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="0400 123 456" />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
                     <label className="mb-1 block text-sm text-gray-600">Reference Style</label>
                     <input type="text" value={customerAI.contact_reference_style || ''} onChange={(e) => setCustomerAI({ ...customerAI, contact_reference_style: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="email us at" />
@@ -620,13 +622,13 @@ export default function AdminPage() {
             </div>
 
             {/* Modal footer */}
-            <div className="flex items-center justify-between border-t px-6 py-4">
-              <button onClick={handlePreviewCustomer} disabled={previewingCustomer} className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50">
+            <div className="flex flex-col gap-3 border-t px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+              <button onClick={handlePreviewCustomer} disabled={previewingCustomer} className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50">
                 {previewingCustomer ? <Loader2 size={14} className="animate-spin" /> : <TestTube size={14} />}Preview Replies
               </button>
               <div className="flex items-center gap-3">
-                <button onClick={() => setConfigUser(null)} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</button>
-                <button onClick={handleSaveCustomerAI} disabled={savingCustomerAI} className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">{savingCustomerAI ? 'Saving...' : 'Save Settings'}</button>
+                <button onClick={() => setConfigUser(null)} className="min-h-[44px] flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 sm:flex-none">Cancel</button>
+                <button onClick={handleSaveCustomerAI} disabled={savingCustomerAI} className="min-h-[44px] flex-1 rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 sm:flex-none">{savingCustomerAI ? 'Saving...' : 'Save Settings'}</button>
               </div>
             </div>
           </div>
@@ -635,17 +637,17 @@ export default function AdminPage() {
 
       {/* ═══════════════ TEST REVIEW MODAL ═══════════════ */}
       {testReviewUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="relative w-full max-w-lg rounded-2xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b px-6 py-4">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">Inject Test Review</h2>
-                <p className="text-sm text-gray-500">{testReviewUser.business_name || testReviewUser.email}</p>
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center sm:p-4">
+          <div className="relative flex max-h-[90vh] w-full flex-col rounded-t-2xl bg-white shadow-2xl sm:max-h-none sm:max-w-lg sm:rounded-2xl">
+            <div className="flex items-center justify-between border-b px-4 py-4 sm:px-6">
+              <div className="min-w-0 pr-2">
+                <h2 className="truncate text-lg font-semibold text-gray-900">Inject Test Review</h2>
+                <p className="truncate text-sm text-gray-500">{testReviewUser.business_name || testReviewUser.email}</p>
               </div>
-              <button onClick={() => setTestReviewUser(null)} className="rounded-lg p-2 text-gray-400 hover:bg-gray-100"><X size={20} /></button>
+              <button onClick={() => setTestReviewUser(null)} className="shrink-0 rounded-lg p-2 text-gray-400 hover:bg-gray-100"><X size={20} /></button>
             </div>
 
-            <div className="px-6 py-6 space-y-4">
+            <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4 sm:px-6">
               {testReviewLocations.length > 0 && (
                 <div>
                   <label className="mb-1.5 block text-sm font-medium text-gray-700">Location</label>
@@ -691,11 +693,11 @@ export default function AdminPage() {
               )}
             </div>
 
-            <div className="flex items-center justify-between border-t px-6 py-4">
+            <div className="flex flex-col gap-3 border-t px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
               <p className="text-xs text-gray-400">Review will be flagged as test</p>
               <div className="flex items-center gap-3">
-                <button onClick={() => setTestReviewUser(null)} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">Close</button>
-                <button onClick={handleSubmitTestReview} disabled={submittingTestReview || !testReviewName.trim()} className="flex items-center gap-1.5 rounded-lg bg-amber-500 px-5 py-2 text-sm font-medium text-white hover:bg-amber-600 disabled:opacity-50">
+                <button onClick={() => setTestReviewUser(null)} className="min-h-[44px] flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 sm:flex-none">Close</button>
+                <button onClick={handleSubmitTestReview} disabled={submittingTestReview || !testReviewName.trim()} className="flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-lg bg-amber-500 px-5 py-2 text-sm font-medium text-white hover:bg-amber-600 disabled:opacity-50 sm:flex-none">
                   {submittingTestReview ? <><Loader2 size={14} className="animate-spin" />Processing...</> : <><FlaskConical size={14} />Inject Test Review</>}
                 </button>
               </div>
