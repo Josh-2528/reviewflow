@@ -81,6 +81,8 @@ export async function sendNewReviewEmail(params: NewReviewEmailParams) {
 
   const subject = `New ${starRating}-Star Review at ${displayName}`
 
+  console.log('[Email] sendNewReviewEmail called:', { to, from: FROM_EMAIL, subject })
+
   try {
     await getResend().emails.send({
       from: FROM_EMAIL,
