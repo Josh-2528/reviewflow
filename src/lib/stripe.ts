@@ -83,14 +83,15 @@ export function getUserPlanStatus(user: {
 
 /**
  * Get the number of trial days remaining. Returns 0 if expired.
+ * Remaining = 14 - floor(days elapsed). Day 0 = 14 remaining, day 1 = 13, etc.
  */
 export function getTrialDaysRemaining(trialStartedAt: string | null): number {
   if (!trialStartedAt) return 0
 
   const trialStart = new Date(trialStartedAt)
   const now = new Date()
-  const daysSinceStart = (now.getTime() - trialStart.getTime()) / (1000 * 60 * 60 * 24)
-  const remaining = Math.ceil(TRIAL_DURATION_DAYS - daysSinceStart)
+  const fullDaysElapsed = Math.floor((now.getTime() - trialStart.getTime()) / (1000 * 60 * 60 * 24))
+  const remaining = TRIAL_DURATION_DAYS - fullDaysElapsed
 
   return Math.max(0, remaining)
 }

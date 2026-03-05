@@ -137,7 +137,8 @@ export async function GET(request: NextRequest) {
             const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
             sendNewReviewEmail({
               to: emailTo,
-              businessName: source.locationName || user.business_name || 'Your Business',
+              businessName: user.business_name || 'Your Business',
+              locationName: source.locationName,
               reviewerName: parsed.reviewer_name,
               starRating: parsed.star_rating,
               reviewText: parsed.review_text,

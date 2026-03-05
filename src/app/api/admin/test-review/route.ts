@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { user_id, reviewer_name, star_rating, review_text } = body
+    const { user_id, reviewer_name, star_rating, review_text, location_id } = body
 
     if (!user_id || !reviewer_name || !star_rating) {
       return NextResponse.json(
@@ -63,6 +63,7 @@ export async function POST(request: NextRequest) {
       .from('reviews')
       .insert({
         user_id,
+        location_id: location_id || null,
         google_review_id: testReviewId,
         reviewer_name,
         reviewer_photo_url: null,
@@ -86,6 +87,7 @@ export async function POST(request: NextRequest) {
       user_id,
       action: 'review_detected',
       review_id: savedReview.id,
+      location_id: location_id || null,
       details: `[TEST] New ${star_rating}-star review from ${reviewer_name}`,
     })
 
@@ -101,6 +103,7 @@ export async function POST(request: NextRequest) {
         starRating: star_rating,
         reviewText: review_text || null,
         reviewerName: reviewer_name,
+        locationId: location_id || null,
       })
     } catch (aiError) {
       console.error('AI reply generation failed for test review:', aiError)
@@ -128,6 +131,7 @@ export async function POST(request: NextRequest) {
       user_id,
       action: 'reply_generated',
       review_id: savedReview.id,
+      location_id: location_id || null,
       details: `[TEST] AI reply generated for ${reviewer_name}'s review`,
     })
 
@@ -170,6 +174,7 @@ export async function POST(request: NextRequest) {
             user_id,
             action: 'reply_published',
             review_id: savedReview.id,
+            location_id: location_id || null,
             details: `[TEST] Reply auto-published for ${reviewer_name}'s review`,
           })
 
@@ -213,6 +218,7 @@ export async function POST(request: NextRequest) {
           user_id,
           action: 'reply_published',
           review_id: savedReview.id,
+          location_id: location_id || null,
           details: `[TEST] Reply auto-published (no Google connected) for ${reviewer_name}'s review`,
         })
 

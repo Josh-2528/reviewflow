@@ -111,6 +111,8 @@ export default function AdminPage() {
   const [testReviewName, setTestReviewName] = useState('Test Reviewer')
   const [testReviewStars, setTestReviewStars] = useState(5)
   const [testReviewText, setTestReviewText] = useState('')
+  const [testReviewLocationId, setTestReviewLocationId] = useState('')
+  const [testReviewLocations, setTestReviewLocations] = useState<{ id: string; location_name: string | null }[]>([])
   const [submittingTestReview, setSubmittingTestReview] = useState(false)
   const [testReviewResult, setTestReviewResult] = useState<{
     message: string
@@ -233,12 +235,23 @@ export default function AdminPage() {
   }
 
   // ── Test Review handlers ──────────────────────────
-  const handleOpenTestReview = (user: AdminUser) => {
+  const handleOpenTestReview = async (user: AdminUser) => {
     setTestReviewUser(user)
     setTestReviewName('Test Reviewer')
     setTestReviewStars(5)
     setTestReviewText('')
+    setTestReviewLocationId('')
+    setTestReviewLocations([])
     setTestReviewResult(null)
+    // Fetch user's locations
+    const res = await fetch(`/api/settings?impersonate=${user.id}`)
+    if (res.ok) {
+      const data = await res.json()
+      if (data.locations && data.locations.length > 0) {
+        setTestReviewLocations(data.locations.map((l: { id: string; location_name: string | null }) => ({ id: l.id, location_name: l.location_name })))
+        setTestReviewLocationId(data.locations[0].id)
+      }
+    }
   }
 
   const handleSubmitTestReview = async () => {
@@ -254,6 +267,7 @@ export default function AdminPage() {
           reviewer_name: testReviewName,
           star_rating: testReviewStars,
           review_text: testReviewText || null,
+          location_id: testReviewLocationId || null,
         }),
       })
       const data = await res.json()
@@ -632,6 +646,17 @@ export default function AdminPage() {
             </div>
 
             <div className="px-6 py-6 space-y-4">
+              {testReviewLocations.length > 0 && (
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700">Location</label>
+                  <select value={testReviewLocationId} onChange={(e) => setTestReviewLocationId(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                    {testReviewLocations.map((loc) => (
+                      <option key={loc.id} value={loc.id}>{loc.location_name || 'Unnamed Location'}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-gray-700">Reviewer Name</label>
                 <input type="text" value={testReviewName} onChange={(e) => setTestReviewName(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="Test Reviewer" />

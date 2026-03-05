@@ -181,6 +181,23 @@ function DashboardPage() {
     } catch { toast.error('Failed to skip review') }
   }
 
+  const handleRegenerate = async (reviewId: string) => {
+    if (isDemo) { toast.error('Sign up to use this feature with your real reviews'); return }
+    if (planStatus === 'expired') { toast.error('Your trial has ended. Subscribe to continue managing your reviews.'); return }
+    try {
+      const res = await fetch('/api/replies/regenerate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ review_id: reviewId }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        toast.success('Reply regenerated!')
+        await fetchReviews()
+      } else { toast.error(data.error || 'Failed to regenerate reply') }
+    } catch { toast.error('Failed to regenerate reply') }
+  }
+
   const handleLogout = async () => {
     const supabase = createClient()
     await supabase.auth.signOut()
@@ -251,7 +268,7 @@ function DashboardPage() {
         {!isDemo && planStatus === 'trial' && (
           <div className="border-b border-emerald-200 bg-emerald-50 px-4 py-3">
             <div className="mx-auto flex max-w-4xl items-center justify-between">
-              <p className="text-sm text-emerald-800">🎉 You&apos;re on your 14-day free trial. <strong>{trialDaysRemaining} day{trialDaysRemaining !== 1 ? 's' : ''} remaining.</strong></p>
+              <p className="text-sm text-emerald-800">You are on your 14-day free trial. <strong>{trialDaysRemaining} day{trialDaysRemaining !== 1 ? 's' : ''} remaining.</strong></p>
               <Link href="/pricing" className="shrink-0 rounded-lg bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-emerald-700">Subscribe Now</Link>
             </div>
           </div>
@@ -387,6 +404,7 @@ function DashboardPage() {
                   onApprove={handleApprove}
                   onEdit={() => setEditingReview(review)}
                   onSkip={handleSkip}
+                  onRegenerate={handleRegenerate}
                   isDemo={isDemo}
                   isExpired={planStatus === 'expired'}
                   showLocation={locations.length > 0 && !selectedLocationId}
@@ -426,6 +444,7 @@ function ReviewCard({
   onApprove,
   onEdit,
   onSkip,
+  onRegenerate,
   isDemo,
   isExpired,
   showLocation,
@@ -434,15 +453,18 @@ function ReviewCard({
   onApprove: (id: string) => void
   onEdit: () => void
   onSkip: (id: string) => void
+  onRegenerate: (id: string) => void
   isDemo: boolean
   isExpired: boolean
   showLocation: boolean
 }) {
   const [approving, setApproving] = useState(false)
   const [skipping, setSkipping] = useState(false)
+  const [regenerating, setRegenerating] = useState(false)
 
   const handleApprove = async () => { setApproving(true); await onApprove(review.id); setApproving(false) }
   const handleSkip = async () => { setSkipping(true); await onSkip(review.id); setSkipping(false) }
+  const handleRegenerate = async () => { setRegenerating(true); await onRegenerate(review.id); setRegenerating(false) }
 
   const actionsDisabled = isDemo || isExpired
   const locationName = review.location?.location_name
@@ -507,6 +529,9 @@ function ReviewCard({
                 </button>
                 <button onClick={onEdit} className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
                   <Pencil size={14} />Edit
+                </button>
+                <button onClick={handleRegenerate} disabled={regenerating} className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50">
+                  <RefreshCw size={14} className={regenerating ? 'animate-spin' : ''} />{regenerating ? 'Regenerating...' : 'Regenerate'}
                 </button>
                 <button onClick={handleSkip} disabled={skipping} className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50">
                   <X size={14} />Skip

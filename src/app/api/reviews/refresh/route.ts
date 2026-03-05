@@ -158,7 +158,8 @@ export async function POST() {
           const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
           sendNewReviewEmail({
             to: emailTo,
-            businessName: source.locationName || profile.business_name || 'Your Business',
+            businessName: profile.business_name || 'Your Business',
+            locationName: source.locationName,
             reviewerName: parsed.reviewer_name,
             starRating: parsed.star_rating,
             reviewText: parsed.review_text,

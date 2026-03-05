@@ -181,12 +181,12 @@ export default function OnboardingClient() {
 
               <div className="mb-4">
                 <label className="mb-1.5 block text-sm font-medium text-gray-700">Business Name</label>
-                <input type="text" value={businessName} onChange={(e) => setBusinessName(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="e.g. Joe's Coffee House" />
+                <input type="text" value={businessName} onChange={(e) => setBusinessName(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="e.g. Turbo Wash" />
               </div>
 
               <div className="mb-6">
                 <label className="mb-1.5 block text-sm font-medium text-gray-700">Location</label>
-                <input type="text" value={businessLocation} onChange={(e) => setBusinessLocation(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="e.g. Melbourne, Australia" />
+                <input type="text" value={businessLocation} onChange={(e) => setBusinessLocation(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="e.g. 123 Main St, Sydney NSW" />
               </div>
 
               <button onClick={handleStep1} disabled={saving} className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
