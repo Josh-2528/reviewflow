@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { generateReviewReply } from '@/lib/claude'
 import { postReply } from '@/lib/google'
 import { hasFullAccess, canAutoPublish } from '@/lib/stripe'
+import { sendNewReviewEmail } from '@/lib/email'
 
 async function verifyAdmin() {
   const supabase = await createClient()
@@ -90,6 +91,34 @@ export async function POST(request: NextRequest) {
       location_id: location_id || null,
       details: `[TEST] New ${star_rating}-star review from ${reviewer_name}`,
     })
+
+    // 2b. Send email notification (same logic as review refresh route)
+    let locationName: string | null = null
+    let locationContactEmail: string | null = null
+    if (location_id) {
+      const { data: location } = await adminClient
+        .from('locations')
+        .select('location_name, contact_email')
+        .eq('id', location_id)
+        .single()
+      if (location) {
+        locationName = location.location_name
+        locationContactEmail = location.contact_email
+      }
+    }
+    const emailTo = locationContactEmail || (profile.email_new_review !== false ? profile.email : null)
+    if (emailTo) {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+      sendNewReviewEmail({
+        to: emailTo,
+        businessName: profile.business_name || 'Your Business',
+        locationName,
+        reviewerName: reviewer_name,
+        starRating: star_rating,
+        reviewText: review_text || null,
+        dashboardUrl: `${appUrl}/dashboard`,
+      }).catch((err) => console.error('[TEST] Email send failed:', err))
+    }
 
     // 3. Generate AI reply (using the customer's full AI prompt settings)
     let replyText: string
