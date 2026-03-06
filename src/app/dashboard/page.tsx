@@ -22,6 +22,7 @@ import {
   Lock,
   AlertTriangle,
   MapPin,
+  Sparkles,
 } from 'lucide-react'
 import { StarRating } from '@/components/star-rating'
 import { StatusBadge } from '@/components/status-badge'
@@ -513,6 +514,26 @@ function ReviewCard({
           <p className="mt-3 text-sm italic text-gray-400">Rating only — no review text</p>
         )}
       </div>
+
+      {/* Generate Reply for new reviews */}
+      {review.status === 'new' && (
+        <div className="border-t border-gray-100 bg-gray-50/50 p-4 sm:p-5">
+          {actionsDisabled ? (
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <Lock size={14} />
+              {isDemo ? 'Sign up to use this feature with your real reviews' : 'Subscribe to manage your reviews'}
+            </div>
+          ) : (
+            <button onClick={handleRegenerate} disabled={regenerating} className="flex min-h-[44px] items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50">
+              {regenerating ? (
+                <><RefreshCw size={14} className="animate-spin" />Generating...</>
+              ) : (
+                <><Sparkles size={14} />Generate Reply</>
+              )}
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Reply Section */}
       {review.reply && review.status === 'reply_generated' && (
