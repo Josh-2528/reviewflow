@@ -327,7 +327,7 @@ export async function generateReviewReply(
   })
 
   const message = await anthropic.messages.create({
-    model: 'claude-sonnet-4-5-20250514',
+    model: 'claude-sonnet-4-20250514',
     max_tokens: 300,
     system: prompt.system,
     messages: [{ role: 'user', content: prompt.user }],
