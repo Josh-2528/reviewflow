@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { buildAIPrompt } from '@/lib/claude'
+import { buildAIPrompt, logApiUsage } from '@/lib/claude'
 
 async function verifyAdmin() {
   const supabase = await createClient()
@@ -68,6 +68,20 @@ export async function POST(request: NextRequest) {
         messages: [{ role: 'user', content: prompt5Star.user }],
       }),
     ])
+
+    // Log usage for both preview calls (fire-and-forget)
+    logApiUsage({
+      userId: admin.id,
+      action: 'preview',
+      inputTokens: reply1Star.usage.input_tokens,
+      outputTokens: reply1Star.usage.output_tokens,
+    })
+    logApiUsage({
+      userId: admin.id,
+      action: 'preview',
+      inputTokens: reply5Star.usage.input_tokens,
+      outputTokens: reply5Star.usage.output_tokens,
+    })
 
     const text1 = reply1Star.content.find((b) => b.type === 'text')
     const text5 = reply5Star.content.find((b) => b.type === 'text')

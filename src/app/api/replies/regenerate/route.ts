@@ -67,6 +67,7 @@ export async function POST(request: NextRequest) {
       reviewText: review.review_text,
       reviewerName: review.reviewer_name,
       locationId: review.location_id,
+      action: 'reply_regeneration',
     })
 
     // Update existing reply or insert new one

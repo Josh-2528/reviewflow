@@ -249,6 +249,36 @@ async function getAISettings(
   }
 }
 
+// ── Usage tracking ──────────────────────────────────────────────────
+
+const INPUT_COST_PER_MILLION = 3   // $3 per million input tokens (Claude Sonnet 4)
+const OUTPUT_COST_PER_MILLION = 15 // $15 per million output tokens (Claude Sonnet 4)
+
+export async function logApiUsage(params: {
+  userId: string
+  action: 'reply_generation' | 'reply_regeneration' | 'preview'
+  inputTokens: number
+  outputTokens: number
+}): Promise<void> {
+  try {
+    const adminClient = createAdminClient()
+    const estimatedCost =
+      (params.inputTokens / 1_000_000) * INPUT_COST_PER_MILLION +
+      (params.outputTokens / 1_000_000) * OUTPUT_COST_PER_MILLION
+
+    await adminClient.from('api_usage_log').insert({
+      user_id: params.userId,
+      action: params.action,
+      input_tokens: params.inputTokens,
+      output_tokens: params.outputTokens,
+      estimated_cost_usd: estimatedCost,
+    })
+  } catch (err) {
+    // Non-fatal: don't let usage tracking break the reply pipeline
+    console.error('Failed to log API usage:', err)
+  }
+}
+
 // ── Main reply generation function ──────────────────────────────────
 
 interface GenerateReplyParams {
@@ -261,6 +291,7 @@ interface GenerateReplyParams {
   reviewText: string | null
   reviewerName?: string
   locationId?: string | null
+  action?: 'reply_generation' | 'reply_regeneration'
 }
 
 export async function generateReviewReply(
@@ -331,6 +362,14 @@ export async function generateReviewReply(
     max_tokens: 300,
     system: prompt.system,
     messages: [{ role: 'user', content: prompt.user }],
+  })
+
+  // Log API usage (fire-and-forget — non-blocking)
+  logApiUsage({
+    userId,
+    action: params.action || 'reply_generation',
+    inputTokens: message.usage.input_tokens,
+    outputTokens: message.usage.output_tokens,
   })
 
   const textBlock = message.content.find((block) => block.type === 'text')

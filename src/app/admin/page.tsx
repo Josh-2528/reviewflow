@@ -28,6 +28,8 @@ import {
   Loader2,
   TestTube,
   FlaskConical,
+  BarChart3,
+  RefreshCw,
 } from 'lucide-react'
 import type { AIPromptSettings } from '@/lib/types'
 
@@ -55,7 +57,31 @@ interface Branding {
   primary_color: string
 }
 
-type AdminTab = 'users' | 'branding' | 'ai-prompts'
+type AdminTab = 'users' | 'branding' | 'ai-prompts' | 'usage'
+
+interface UsageSummary {
+  total_cost_month: number
+  total_calls_month: number
+  avg_cost_per_reply: number
+}
+
+interface UsageUserBreakdown {
+  email: string
+  business_name: string | null
+  calls_today: number
+  calls_month: number
+  cost_today: number
+  cost_month: number
+  total_cost: number
+}
+
+interface UsageDailyBreakdown {
+  date: string
+  calls: number
+  cost: number
+  input_tokens: number
+  output_tokens: number
+}
 
 const emptyAISettings: Partial<AIPromptSettings> = {
   base_system_prompt: '',
@@ -121,6 +147,13 @@ export default function AdminPage() {
     reply_preview: string
   } | null>(null)
 
+  // Usage tab
+  const [usageSummary, setUsageSummary] = useState<UsageSummary | null>(null)
+  const [usageUsers, setUsageUsers] = useState<UsageUserBreakdown[]>([])
+  const [usageDaily, setUsageDaily] = useState<UsageDailyBreakdown[]>([])
+  const [usageLoading, setUsageLoading] = useState(false)
+  const [usageSearch, setUsageSearch] = useState('')
+
   const router = useRouter()
 
   const fetchData = async () => {
@@ -143,7 +176,29 @@ export default function AdminPage() {
     if (res.ok) { const data = await res.json(); if (data.global) setGlobalAI({ ...emptyAISettings, ...data.global }) }
   }
 
+  const fetchUsage = async () => {
+    setUsageLoading(true)
+    try {
+      const res = await fetch('/api/admin/usage')
+      if (!res.ok) { toast.error('Failed to load usage data'); return }
+      const data = await res.json()
+      setUsageSummary(data.summary)
+      setUsageUsers(data.user_breakdown)
+      setUsageDaily(data.daily_breakdown)
+    } catch {
+      toast.error('Failed to load usage data')
+    } finally {
+      setUsageLoading(false)
+    }
+  }
+
   useEffect(() => { fetchData(); fetchBranding(); fetchGlobalAI() }, [])
+
+  useEffect(() => {
+    if (activeTab === 'usage' && !usageSummary) {
+      fetchUsage()
+    }
+  }, [activeTab])
 
   // ── User handlers ────────────────────────────────
   const handleChangePlan = async (userId: string, planId: string) => {
@@ -328,7 +383,7 @@ export default function AdminPage() {
         {/* Tab bar */}
         <div className="-mx-4 mb-6 overflow-x-auto px-4 sm:mx-0 sm:px-0">
           <div className="flex gap-1 rounded-lg border border-gray-200 bg-white p-1">
-            {([['users', Users, 'Users'], ['ai-prompts', Sparkles, 'AI Prompts'], ['branding', Palette, 'Branding']] as const).map(([key, Icon, label]) => (
+            {([['users', Users, 'Users'], ['ai-prompts', Sparkles, 'AI Prompts'], ['usage', BarChart3, 'Usage'], ['branding', Palette, 'Branding']] as const).map(([key, Icon, label]) => (
               <button key={key} onClick={() => setActiveTab(key as AdminTab)} className={`flex shrink-0 items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors ${activeTab === key ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
                 <Icon size={16} />{label}
               </button>
@@ -454,6 +509,126 @@ export default function AdminPage() {
               )}
             </div>
           </div>
+        )}
+
+        {/* ═══════════════ USAGE TAB ═══════════════ */}
+        {activeTab === 'usage' && (
+          <>
+            {usageLoading ? (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+              </div>
+            ) : (
+              <>
+                {/* Summary Cards */}
+                {usageSummary && (
+                  <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <StatCard icon={<DollarSign className="h-5 w-5 text-green-500" />} label="API Cost This Month" value={`$${usageSummary.total_cost_month.toFixed(2)}`} />
+                    <StatCard icon={<BarChart3 className="h-5 w-5 text-blue-500" />} label="API Calls This Month" value={usageSummary.total_calls_month.toLocaleString()} />
+                    <StatCard icon={<Sparkles className="h-5 w-5 text-purple-500" />} label="Avg Cost / Reply" value={`$${usageSummary.avg_cost_per_reply.toFixed(4)}`} />
+                    <div className="flex items-center justify-center rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                      <button onClick={fetchUsage} disabled={usageLoading} className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
+                        <RefreshCw size={14} className={usageLoading ? 'animate-spin' : ''} />
+                        Refresh
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Per-User Breakdown */}
+                <div className="mb-8">
+                  <h3 className="mb-3 text-sm font-semibold text-gray-900">Per-User Breakdown</h3>
+                  <div className="relative mb-4">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      value={usageSearch}
+                      onChange={(e) => setUsageSearch(e.target.value)}
+                      placeholder="Search by email or business name..."
+                      className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+                    <div className="overflow-x-auto">
+                      <table className="w-full min-w-[800px]">
+                        <thead>
+                          <tr className="border-b border-gray-100 bg-gray-50">
+                            <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">User</th>
+                            <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Calls Today</th>
+                            <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Cost Today</th>
+                            <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Calls Month</th>
+                            <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Cost Month</th>
+                            <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Total Cost</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {usageUsers
+                            .filter((u) =>
+                              u.email?.toLowerCase().includes(usageSearch.toLowerCase()) ||
+                              u.business_name?.toLowerCase().includes(usageSearch.toLowerCase())
+                            )
+                            .map((u) => (
+                              <tr key={u.email} className="hover:bg-gray-50">
+                                <td className="px-5 py-4">
+                                  <p className="text-sm font-medium text-gray-900">{u.email}</p>
+                                  {u.business_name && <p className="mt-0.5 text-xs text-gray-500">{u.business_name}</p>}
+                                </td>
+                                <td className="px-5 py-4 text-right text-sm text-gray-600">{u.calls_today}</td>
+                                <td className="px-5 py-4 text-right text-sm text-gray-600">${u.cost_today.toFixed(4)}</td>
+                                <td className="px-5 py-4 text-right text-sm text-gray-600">{u.calls_month}</td>
+                                <td className="px-5 py-4 text-right text-sm font-medium text-gray-900">${u.cost_month.toFixed(4)}</td>
+                                <td className="px-5 py-4 text-right text-sm text-gray-600">${u.total_cost.toFixed(2)}</td>
+                              </tr>
+                            ))}
+                          {usageUsers.length === 0 && (
+                            <tr>
+                              <td colSpan={6} className="px-5 py-12 text-center text-sm text-gray-400">No API usage data yet</td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Daily Breakdown */}
+                <div>
+                  <h3 className="mb-3 text-sm font-semibold text-gray-900">Daily Breakdown (Last 30 Days)</h3>
+                  <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-gray-100 bg-gray-50">
+                            <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Date</th>
+                            <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">API Calls</th>
+                            <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Input Tokens</th>
+                            <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Output Tokens</th>
+                            <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Cost</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {usageDaily.map((day) => (
+                            <tr key={day.date} className="hover:bg-gray-50">
+                              <td className="px-5 py-3 text-sm text-gray-900">{format(new Date(day.date + 'T00:00:00'), 'MMM d, yyyy')}</td>
+                              <td className="px-5 py-3 text-right text-sm text-gray-600">{day.calls}</td>
+                              <td className="px-5 py-3 text-right text-sm text-gray-600">{day.input_tokens.toLocaleString()}</td>
+                              <td className="px-5 py-3 text-right text-sm text-gray-600">{day.output_tokens.toLocaleString()}</td>
+                              <td className="px-5 py-3 text-right text-sm font-medium text-gray-900">${day.cost.toFixed(4)}</td>
+                            </tr>
+                          ))}
+                          {usageDaily.length === 0 && (
+                            <tr>
+                              <td colSpan={5} className="px-5 py-12 text-center text-sm text-gray-400">No usage data in the last 30 days</td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </>
         )}
 
         {/* ═══════════════ BRANDING TAB ═══════════════ */}

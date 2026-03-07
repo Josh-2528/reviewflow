@@ -132,3 +132,13 @@ export interface OnboardingProgress {
   has_contact_details: boolean
   email_notifications_on: boolean
 }
+
+export interface ApiUsageLog {
+  id: string
+  user_id: string
+  action: 'reply_generation' | 'reply_regeneration' | 'preview'
+  input_tokens: number
+  output_tokens: number
+  estimated_cost_usd: number
+  created_at: string
+}
