@@ -30,8 +30,9 @@ import {
   FlaskConical,
   BarChart3,
   RefreshCw,
+  Globe,
 } from 'lucide-react'
-import type { AIPromptSettings } from '@/lib/types'
+import type { AIPromptSettings, Location } from '@/lib/types'
 
 interface AdminUser {
   id: string
@@ -146,6 +147,16 @@ export default function AdminPage() {
     auto_publish_triggered: boolean
     reply_preview: string
   } | null>(null)
+
+  // Google config modal
+  const [googleConfigUser, setGoogleConfigUser] = useState<AdminUser | null>(null)
+  const [googleConfigLocations, setGoogleConfigLocations] = useState<Location[]>([])
+  const [googleConfigSelectedLocationId, setGoogleConfigSelectedLocationId] = useState('')
+  const [googleConfigAccountId, setGoogleConfigAccountId] = useState('')
+  const [googleConfigLocationId, setGoogleConfigLocationId] = useState('')
+  const [googleConfigLocationName, setGoogleConfigLocationName] = useState('')
+  const [googleConfigLoading, setGoogleConfigLoading] = useState(false)
+  const [savingGoogleConfig, setSavingGoogleConfig] = useState(false)
 
   // Usage tab
   const [usageSummary, setUsageSummary] = useState<UsageSummary | null>(null)
@@ -338,6 +349,85 @@ export default function AdminPage() {
     setSubmittingTestReview(false)
   }
 
+  // ── Google Config handlers ──────────────────────────
+  const handleOpenGoogleConfig = async (user: AdminUser) => {
+    setGoogleConfigUser(user)
+    setGoogleConfigLocations([])
+    setGoogleConfigSelectedLocationId('')
+    setGoogleConfigAccountId('')
+    setGoogleConfigLocationId('')
+    setGoogleConfigLocationName('')
+    setGoogleConfigLoading(true)
+
+    try {
+      const res = await fetch(`/api/admin/google-config?user_id=${user.id}`)
+      if (res.ok) {
+        const data = await res.json()
+        const locs: Location[] = data.locations || []
+        setGoogleConfigLocations(locs)
+        if (locs.length > 0) {
+          const primary = locs.find((l) => l.is_primary) || locs[0]
+          setGoogleConfigSelectedLocationId(primary.id)
+          setGoogleConfigAccountId(primary.google_account_id || '')
+          setGoogleConfigLocationId(primary.google_location_id || '')
+        } else {
+          // No locations — populate from legacy user-level fields
+          setGoogleConfigAccountId(data.user?.google_account_id || '')
+          setGoogleConfigLocationId(data.user?.google_location_id || '')
+        }
+      }
+    } catch {
+      toast.error('Failed to load Google config')
+    }
+    setGoogleConfigLoading(false)
+  }
+
+  const handleGoogleConfigLocationChange = (locationId: string) => {
+    setGoogleConfigSelectedLocationId(locationId)
+    const loc = googleConfigLocations.find((l) => l.id === locationId)
+    if (loc) {
+      setGoogleConfigAccountId(loc.google_account_id || '')
+      setGoogleConfigLocationId(loc.google_location_id || '')
+    }
+  }
+
+  const handleSaveGoogleConfig = async () => {
+    if (!googleConfigUser) return
+    setSavingGoogleConfig(true)
+    try {
+      const body: Record<string, unknown> = {
+        user_id: googleConfigUser.id,
+        google_account_id: googleConfigAccountId || null,
+        google_location_id: googleConfigLocationId || null,
+      }
+
+      if (googleConfigSelectedLocationId) {
+        body.location_id = googleConfigSelectedLocationId
+      } else {
+        body.create_location = true
+        body.location_name = googleConfigLocationName || null
+      }
+
+      const res = await fetch('/api/admin/google-config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+
+      if (res.ok) {
+        toast.success(`Google config saved for ${googleConfigUser.email}`)
+        setGoogleConfigUser(null)
+        await fetchData()
+      } else {
+        const data = await res.json()
+        toast.error(data.error || 'Failed to save Google config')
+      }
+    } catch {
+      toast.error('Failed to save Google config')
+    }
+    setSavingGoogleConfig(false)
+  }
+
   const handleLogout = async () => { const supabase = createClient(); await supabase.auth.signOut(); router.push('/') }
 
   const filteredUsers = users.filter(u => u.email.toLowerCase().includes(search.toLowerCase()) || (u.business_name || '').toLowerCase().includes(search.toLowerCase()))
@@ -446,6 +536,7 @@ export default function AdminPage() {
                           ) : (
                             <div className="flex items-center justify-end gap-1">
                               <button onClick={() => handleOpenTestReview(user)} className="rounded-lg p-1.5 text-gray-400 hover:bg-amber-50 hover:text-amber-600" title="Test Review"><FlaskConical size={15} /></button>
+                              <button onClick={() => handleOpenGoogleConfig(user)} className="rounded-lg p-1.5 text-gray-400 hover:bg-green-50 hover:text-green-600" title="Configure Google"><Globe size={15} /></button>
                               <button onClick={() => handleOpenCustomerConfig(user)} className="rounded-lg p-1.5 text-gray-400 hover:bg-purple-50 hover:text-purple-600" title="Configure AI"><Settings size={15} /></button>
                               <Link href={`/dashboard?impersonate=${user.id}`} className="rounded-lg p-1.5 text-gray-400 hover:bg-blue-50 hover:text-blue-600" title="View as this user"><Eye size={15} /></Link>
                               <button onClick={() => setConfirmDelete(user.id)} className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600" title="Delete user"><Trash2 size={15} /></button>
@@ -876,6 +967,133 @@ export default function AdminPage() {
                   {submittingTestReview ? <><Loader2 size={14} className="animate-spin" />Processing...</> : <><FlaskConical size={14} />Inject Test Review</>}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════ GOOGLE CONFIG MODAL ═══════════════ */}
+      {googleConfigUser && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center sm:p-4">
+          <div className="relative flex max-h-[90vh] w-full flex-col rounded-t-2xl bg-white shadow-2xl sm:max-h-none sm:max-w-lg sm:rounded-2xl">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b px-4 py-4 sm:px-6">
+              <div className="min-w-0 pr-2">
+                <h2 className="truncate text-lg font-semibold text-gray-900">Configure Google</h2>
+                <p className="truncate text-sm text-gray-500">
+                  {googleConfigUser.business_name || googleConfigUser.email}
+                </p>
+              </div>
+              <button onClick={() => setGoogleConfigUser(null)} className="shrink-0 rounded-lg p-2 text-gray-400 hover:bg-gray-100">
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4 sm:px-6">
+              {googleConfigLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                </div>
+              ) : (
+                <>
+                  {/* Location dropdown or create-location flow */}
+                  {googleConfigLocations.length > 0 ? (
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-gray-700">Location</label>
+                      <select
+                        value={googleConfigSelectedLocationId}
+                        onChange={(e) => handleGoogleConfigLocationChange(e.target.value)}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      >
+                        {googleConfigLocations.map((loc) => (
+                          <option key={loc.id} value={loc.id}>
+                            {loc.location_name || 'Unnamed Location'}
+                            {loc.google_account_id ? ' (configured)' : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 mb-4">
+                        <p className="text-sm text-amber-800">
+                          This user has no locations. Saving will create their first location.
+                        </p>
+                      </div>
+                      <label className="mb-1.5 block text-sm font-medium text-gray-700">Location Name</label>
+                      <input
+                        type="text"
+                        value={googleConfigLocationName}
+                        onChange={(e) => setGoogleConfigLocationName(e.target.value)}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        placeholder="e.g. Main Street Car Wash"
+                      />
+                    </div>
+                  )}
+
+                  {/* Google Account ID */}
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-gray-700">Google Account ID</label>
+                    <input
+                      type="text"
+                      value={googleConfigAccountId}
+                      onChange={(e) => setGoogleConfigAccountId(e.target.value)}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      placeholder="e.g. 123456789012345678"
+                    />
+                    <p className="mt-1 text-xs text-gray-400">
+                      The numeric ID from business.google.com — visible in the URL after /n/
+                    </p>
+                  </div>
+
+                  {/* Google Location ID */}
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-gray-700">Google Location ID</label>
+                    <input
+                      type="text"
+                      value={googleConfigLocationId}
+                      onChange={(e) => setGoogleConfigLocationId(e.target.value)}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      placeholder="e.g. 12345678901234567890"
+                    />
+                    <p className="mt-1 text-xs text-gray-400">
+                      Found in the URL when viewing a specific location on business.google.com
+                    </p>
+                  </div>
+
+                  {/* Helper info box */}
+                  <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+                    <p className="text-xs font-medium text-blue-800 mb-1">Where to find these IDs</p>
+                    <p className="text-xs text-blue-700">
+                      Go to <span className="font-medium">business.google.com</span> and select the business.
+                      The Account ID is in the URL after <code className="bg-blue-100 px-1 rounded">/n/</code> and
+                      the Location ID is the next path segment. These are long numeric strings (not the business name).
+                    </p>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex flex-col gap-3 border-t px-4 py-4 sm:flex-row sm:items-center sm:justify-end sm:px-6">
+              <button
+                onClick={() => setGoogleConfigUser(null)}
+                className="min-h-[44px] flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 sm:flex-none"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveGoogleConfig}
+                disabled={savingGoogleConfig || !googleConfigAccountId.trim() || !googleConfigLocationId.trim()}
+                className="flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-lg bg-green-600 px-5 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 sm:flex-none"
+              >
+                {savingGoogleConfig ? (
+                  <><Loader2 size={14} className="animate-spin" />Saving...</>
+                ) : (
+                  <><Globe size={14} />Save Google Config</>
+                )}
+              </button>
             </div>
           </div>
         </div>
