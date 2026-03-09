@@ -201,6 +201,111 @@ export async function postReply(
   return response.json()
 }
 
+// Discover Google Business accounts and locations using a raw access token
+// (no DB round-trip — used directly after OAuth token exchange)
+export async function discoverLocationsWithToken(accessToken: string): Promise<{
+  locations: Array<{
+    accountId: string
+    locationId: string
+    locationName: string
+    address: string | null
+  }>
+  error?: string
+}> {
+  try {
+    // 1. List all accounts
+    const accountsRes = await fetch(`${GOOGLE_ACCOUNT_API}/accounts`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+    })
+
+    if (!accountsRes.ok) {
+      const errText = await accountsRes.text()
+      console.error('Google accounts discovery failed:', accountsRes.status, errText)
+      return { locations: [], error: `Failed to list accounts: ${accountsRes.status}` }
+    }
+
+    const accountsData = await accountsRes.json()
+    const accounts = accountsData.accounts || []
+
+    if (accounts.length === 0) {
+      return { locations: [], error: 'No Google Business accounts found' }
+    }
+
+    // 2. List locations for each account
+    const discoveredLocations: Array<{
+      accountId: string
+      locationId: string
+      locationName: string
+      address: string | null
+    }> = []
+
+    for (const account of accounts) {
+      const accountName = account.name as string
+      if (!accountName) continue
+
+      try {
+        const locationsRes = await fetch(
+          `${GOOGLE_BUSINESS_API}/${accountName}/locations?readMask=name,title,storefrontAddress`,
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        )
+
+        if (!locationsRes.ok) {
+          console.error(`Failed to list locations for ${accountName}:`, locationsRes.status)
+          continue
+        }
+
+        const locationsData = await locationsRes.json()
+        const locs = locationsData.locations || []
+
+        for (const loc of locs) {
+          const locName = loc.name as string
+          if (!locName) continue
+
+          const accountIdMatch = accountName.match(/accounts\/(.+)/)
+          const accountId = accountIdMatch ? accountIdMatch[1] : accountName
+
+          const locationIdMatch = locName.match(/locations\/(.+)/)
+          const locationId = locationIdMatch ? locationIdMatch[1] : locName
+
+          const addr = loc.storefrontAddress as Record<string, unknown> | undefined
+          let address: string | null = null
+          if (addr) {
+            const parts = [
+              addr.addressLines ? (addr.addressLines as string[]).join(', ') : null,
+              addr.locality,
+              addr.administrativeArea,
+              addr.postalCode,
+            ].filter(Boolean)
+            address = parts.join(', ') || null
+          }
+
+          discoveredLocations.push({
+            accountId,
+            locationId,
+            locationName: (loc.title as string) || 'Unnamed Location',
+            address,
+          })
+        }
+      } catch (err) {
+        console.error(`Failed to list locations for ${accountName}:`, err)
+      }
+    }
+
+    return { locations: discoveredLocations }
+  } catch (err) {
+    console.error('Google location discovery error:', err)
+    return { locations: [], error: 'Discovery failed' }
+  }
+}
+
 // Parse Google review data into our format
 export function parseGoogleReview(review: Record<string, unknown>) {
   const reviewer = review.reviewer as Record<string, unknown> | undefined

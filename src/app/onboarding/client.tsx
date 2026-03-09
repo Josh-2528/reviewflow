@@ -41,7 +41,18 @@ export default function OnboardingClient() {
       setStep(2)
       toast.success('Google Business Profile connected!')
       fetchLocations()
-      discoverGoogleLocations()
+
+      const locationsFound = searchParams.get('locations_found')
+      if (locationsFound === '1') {
+        // Single location was auto-assigned server-side — just refresh
+        toast.success('Google Business location auto-connected!')
+      } else if (locationsFound && parseInt(locationsFound) > 1) {
+        // Multiple locations found — trigger picker via frontend discovery
+        discoverGoogleLocations()
+      } else {
+        // No locations_found param (legacy) or 0 — try frontend discovery as fallback
+        discoverGoogleLocations()
+      }
     }
     if (searchParams.get('error')) {
       toast.error('Failed to connect Google. Please try again.')

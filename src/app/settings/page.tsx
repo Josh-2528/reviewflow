@@ -120,7 +120,21 @@ function SettingsPage() {
     if (searchParams.get('google') === 'connected') {
       toast.success('Google Business Profile connected!')
       setProfile((prev) => (prev ? { ...prev, google_connected: true } : null))
-      discoverGoogleLocations()
+
+      const locationsFound = searchParams.get('locations_found')
+      if (locationsFound === '1') {
+        // Single location auto-assigned server-side — refresh the locations list
+        toast.success('Google Business location auto-connected!')
+        fetch('/api/locations').then((r) => r.json()).then((data) => {
+          if (data.locations) setLocations(data.locations)
+        })
+      } else if (locationsFound && parseInt(locationsFound) > 1) {
+        // Multiple locations — show picker via frontend discovery
+        discoverGoogleLocations()
+      } else {
+        // Fallback — try frontend discovery
+        discoverGoogleLocations()
+      }
     }
   }, [searchParams])
 
