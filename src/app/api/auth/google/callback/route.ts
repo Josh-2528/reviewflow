@@ -6,7 +6,7 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
     const code = searchParams.get('code')
-    const state = searchParams.get('state') // user id
+    const state = searchParams.get('state') // "userId:returnTo" or just "userId"
     const error = searchParams.get('error')
 
     if (error) {
@@ -21,6 +21,10 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // Parse state: "userId:returnTo" (e.g. "abc123:settings" or just "abc123")
+    const [userId, returnTo] = state.includes(':') ? state.split(':') : [state, 'onboarding']
+    const redirectPath = returnTo === 'settings' ? '/settings' : '/onboarding'
+
     // Exchange code for tokens
     const tokens = await exchangeCodeForTokens(code)
 
@@ -34,18 +38,18 @@ export async function GET(request: NextRequest) {
         google_refresh_token: tokens.refresh_token,
         google_connected: true,
       })
-      .eq('id', state)
+      .eq('id', userId)
 
     if (updateError) {
       console.error('Failed to store tokens:', updateError)
       return NextResponse.redirect(
-        new URL('/onboarding?error=storage_failed', request.url)
+        new URL(`${redirectPath}?error=storage_failed`, request.url)
       )
     }
 
-    // Redirect back to onboarding
+    // Redirect back to the originating page
     return NextResponse.redirect(
-      new URL('/onboarding?google=connected', request.url)
+      new URL(`${redirectPath}?google=connected`, request.url)
     )
   } catch (error) {
     console.error('Google callback error:', error)

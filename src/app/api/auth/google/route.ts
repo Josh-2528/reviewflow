@@ -13,7 +13,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const authUrl = getGoogleAuthUrl(user.id)
+    // Support returnTo for redirecting back to settings vs onboarding
+    let returnTo = 'onboarding'
+    try {
+      const body = await request.json()
+      if (body.returnTo === 'settings') returnTo = 'settings'
+    } catch {
+      // No body or invalid JSON — default to onboarding
+    }
+
+    const state = `${user.id}:${returnTo}`
+    const authUrl = getGoogleAuthUrl(state)
 
     return NextResponse.json({ url: authUrl })
   } catch (error) {

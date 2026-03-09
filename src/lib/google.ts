@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token'
+const GOOGLE_ACCOUNT_API = 'https://mybusinessaccountmanagement.googleapis.com/v1'
 const GOOGLE_BUSINESS_API = 'https://mybusinessbusinessinformation.googleapis.com/v1'
 const GOOGLE_REVIEWS_API = 'https://mybusiness.googleapis.com/v4'
 
@@ -129,12 +130,13 @@ async function googleApiRequest(
 // List all accounts for a user
 export async function listAccounts(userId: string) {
   const response = await googleApiRequest(
-    `${GOOGLE_BUSINESS_API}/accounts`,
+    `${GOOGLE_ACCOUNT_API}/accounts`,
     userId
   )
 
   if (!response.ok) {
-    throw new Error('Failed to list Google Business accounts')
+    const errText = await response.text()
+    throw new Error(`Failed to list Google Business accounts: ${errText}`)
   }
 
   return response.json()
@@ -143,12 +145,13 @@ export async function listAccounts(userId: string) {
 // List locations for an account
 export async function listLocations(userId: string, accountId: string) {
   const response = await googleApiRequest(
-    `${GOOGLE_BUSINESS_API}/accounts/${accountId}/locations`,
+    `${GOOGLE_BUSINESS_API}/${accountId}/locations?readMask=name,title,storefrontAddress`,
     userId
   )
 
   if (!response.ok) {
-    throw new Error('Failed to list Google Business locations')
+    const errText = await response.text()
+    throw new Error(`Failed to list Google Business locations: ${errText}`)
   }
 
   return response.json()

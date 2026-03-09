@@ -26,8 +26,17 @@ import {
   Trash2,
   Phone,
   AtSign,
+  Loader2,
+  Check,
 } from 'lucide-react'
 import type { User, Location } from '@/lib/types'
+
+interface GoogleLocation {
+  accountId: string
+  locationId: string
+  locationName: string
+  address: string | null
+}
 
 type PlanStatus = 'trial' | 'pro' | 'expired'
 
@@ -65,6 +74,11 @@ function SettingsPage() {
   const [contactRefStyle, setContactRefStyle] = useState('email us at')
   const [contactIncludeOn, setContactIncludeOn] = useState('negative_only')
   const [signOff, setSignOff] = useState('')
+  // Google location discovery
+  const [discovering, setDiscovering] = useState(false)
+  const [googleLocations, setGoogleLocations] = useState<GoogleLocation[]>([])
+  const [showPicker, setShowPicker] = useState(false)
+  const [selectedGoogleLocs, setSelectedGoogleLocs] = useState<Set<string>>(new Set())
   const router = useRouter()
   const searchParams = useSearchParams()
   const impersonateId = searchParams.get('impersonate')
@@ -100,6 +114,137 @@ function SettingsPage() {
     }
     loadProfile()
   }, [])
+
+  // Detect Google OAuth return and trigger location discovery
+  useEffect(() => {
+    if (searchParams.get('google') === 'connected') {
+      toast.success('Google Business Profile connected!')
+      setProfile((prev) => (prev ? { ...prev, google_connected: true } : null))
+      discoverGoogleLocations()
+    }
+  }, [searchParams])
+
+  const discoverGoogleLocations = async () => {
+    setDiscovering(true)
+    try {
+      const res = await fetch('/api/google/locations')
+      if (!res.ok) {
+        const data = await res.json()
+        toast.error(data.error || 'Failed to discover Google locations')
+        setDiscovering(false)
+        return
+      }
+      const data = await res.json()
+      const discovered: GoogleLocation[] = data.locations || []
+
+      if (discovered.length === 0) {
+        toast.error('No Google Business locations found on this Google account.')
+        setDiscovering(false)
+        return
+      }
+
+      if (discovered.length === 1) {
+        await assignGoogleLocation(discovered[0])
+        toast.success(`Connected: ${discovered[0].locationName}`)
+      } else {
+        setGoogleLocations(discovered)
+        setShowPicker(true)
+      }
+    } catch {
+      toast.error('Failed to discover Google Business locations')
+    }
+    setDiscovering(false)
+  }
+
+  const assignGoogleLocation = async (gLoc: GoogleLocation) => {
+    // Find an unconnected location to assign to
+    const locRes = await fetch('/api/locations')
+    const locData = await locRes.json()
+    const existingLocs = locData.locations || []
+
+    const unconnected = existingLocs.find(
+      (l: Record<string, unknown>) => !l.google_account_id && !l.google_location_id
+    )
+
+    if (unconnected) {
+      await fetch('/api/locations', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: unconnected.id,
+          google_account_id: gLoc.accountId,
+          google_location_id: gLoc.locationId,
+          location_name: gLoc.locationName,
+          location_address: gLoc.address || unconnected.location_address,
+        }),
+      })
+    } else if (existingLocs.length < 3) {
+      await fetch('/api/locations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          google_account_id: gLoc.accountId,
+          google_location_id: gLoc.locationId,
+          location_name: gLoc.locationName,
+          location_address: gLoc.address || null,
+        }),
+      })
+    } else {
+      toast.error('Maximum 3 locations. Remove one to add another.')
+      return
+    }
+
+    // Set legacy user-level fields
+    await fetch('/api/settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        google_account_id: gLoc.accountId,
+        google_location_id: gLoc.locationId,
+      }),
+    })
+
+    // Refresh locations list
+    const refreshRes = await fetch('/api/locations')
+    if (refreshRes.ok) {
+      const refreshData = await refreshRes.json()
+      setLocations(refreshData.locations || [])
+    }
+  }
+
+  const handlePickerConfirm = async () => {
+    if (selectedGoogleLocs.size === 0) {
+      toast.error('Please select at least one location')
+      return
+    }
+    setSaving(true)
+    const selected = googleLocations.filter((g) =>
+      selectedGoogleLocs.has(`${g.accountId}/${g.locationId}`)
+    )
+    for (const gLoc of selected) {
+      await assignGoogleLocation(gLoc)
+    }
+    setShowPicker(false)
+    setGoogleLocations([])
+    setSelectedGoogleLocs(new Set())
+    toast.success(`Connected ${selected.length} location(s)`)
+    setSaving(false)
+  }
+
+  const toggleGoogleLoc = (gLoc: GoogleLocation) => {
+    const key = `${gLoc.accountId}/${gLoc.locationId}`
+    setSelectedGoogleLocs((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) {
+        next.delete(key)
+      } else if (next.size < 3) {
+        next.add(key)
+      } else {
+        toast.error('Maximum 3 locations')
+      }
+      return next
+    })
+  }
 
   const handleSave = async () => {
     setSaving(true)
@@ -156,7 +301,11 @@ function SettingsPage() {
 
   const handleConnectGoogle = async () => {
     try {
-      const res = await fetch('/api/auth/google', { method: 'POST' })
+      const res = await fetch('/api/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ returnTo: 'settings' }),
+      })
       const data = await res.json()
       if (data.url) {
         window.location.href = data.url
@@ -477,6 +626,51 @@ function SettingsPage() {
                 >
                   <Link2 size={14} />
                   Connect
+                </button>
+              </div>
+            )}
+
+            {/* Location discovery spinner */}
+            {discovering && (
+              <div className="mt-4 flex items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
+                <Loader2 size={16} className="animate-spin text-blue-600" />
+                <span className="text-sm text-blue-700">Discovering your Google Business locations...</span>
+              </div>
+            )}
+
+            {/* Location picker for multiple Google locations */}
+            {showPicker && googleLocations.length > 0 && (
+              <div className="mt-4">
+                <p className="mb-2 text-sm font-medium text-gray-700">
+                  We found {googleLocations.length} locations on your Google account. Select which to connect:
+                </p>
+                <div className="mb-3 space-y-2">
+                  {googleLocations.map((gLoc) => {
+                    const key = `${gLoc.accountId}/${gLoc.locationId}`
+                    const selected = selectedGoogleLocs.has(key)
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => toggleGoogleLoc(gLoc)}
+                        className={`flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors ${selected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}
+                      >
+                        <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${selected ? 'border-blue-500 bg-blue-500' : 'border-gray-300'}`}>
+                          {selected && <Check size={12} className="text-white" />}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium text-gray-900">{gLoc.locationName}</p>
+                          {gLoc.address && <p className="truncate text-xs text-gray-500">{gLoc.address}</p>}
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+                <button
+                  onClick={handlePickerConfirm}
+                  disabled={saving || selectedGoogleLocs.size === 0}
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {saving ? 'Connecting...' : `Connect ${selectedGoogleLocs.size} Location${selectedGoogleLocs.size !== 1 ? 's' : ''}`}
                 </button>
               </div>
             )}
